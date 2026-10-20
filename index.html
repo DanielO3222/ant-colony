@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#3a2414">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ant Haven">
+<title>Ant Haven</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="hud" class="hidden">
+  <div id="top">
+    <div id="res">
+      <div class="r" id="r-food"><i>🍯</i><div><b id="v-food">0</b><small id="c-food">/60</small><u>Food</u><s><span id="m-food"></span></s></div></div>
+      <div class="r"><i>🍃</i><div><b id="v-leaf">0</b><u>Leaves</u></div></div>
+      <div class="r"><i>🥚</i><div><b id="v-egg">0</b><small id="c-egg">/2</small><u>Eggs</u></div></div>
+      <div class="r"><i>🐜</i><div><b id="v-ant">0</b><small id="c-ant">/10</small><u>Ants</u></div></div>
+    </div>
+    <div id="roles"></div>
+    <div id="bar2">
+      <button id="btn-goals" class="sm">🎯 0/15</button>
+      <div id="status"></div>
+      <button id="btn-speed" class="sm">1×</button>
+      <button id="btn-pause" class="sm">⏸</button>
+      <button id="btn-menu" class="sm">☰</button>
+    </div>
+    <div id="alert"><span id="alert-t"></span><button id="alert-b" class="sm green hidden">＋ Harvester</button></div>
+  </div>
+  <div id="coach" class="hidden"><div id="coach-t"></div><button id="coach-ok" class="sm green hidden">✓ Got it</button><button id="coach-x" title="Skip tutorial">✕</button></div>
+  <div id="toasts"></div>
+  <div id="fabs"><button id="btn-army" class="fab hidden">⚔️ Soldiers <span id="army-n">0</span></button><button id="btn-view" class="fab">⬇ Nest</button></div>
+  <div id="bottom">
+    <div id="mode" class="hidden"></div>
+    <div id="sheet" class="hidden"></div>
+    <div id="tabs">
+      <button id="tab-dig" data-tab="dig"><i>⛏</i>Dig</button>
+      <button id="tab-rooms" data-tab="rooms"><i>🏠</i>Rooms</button>
+      <button id="tab-colony" data-tab="colony"><i>🐜</i>Colony</button>
+      <button id="tab-fill" data-tab="fill"><i>🧹</i>Fill</button>
+    </div>
+  </div>
+</div>
+<div id="overlay" class="hidden"><div class="card" id="ov-card"></div></div>
+<script src="sim.js"></script>
+<script src="draw.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
