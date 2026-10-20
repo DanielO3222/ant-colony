@@ -1,7 +1,7 @@
 'use strict';
 // ================= Ant Haven — UI, input, loop =================
 const $ = id => document.getElementById(id);
-const UI = { mode: null, room: null, sel: [], ghost: null, dpath: [], tab: null, sheet: null, selRoom: null, speed: 1, paused: false, running: false, marker: null };
+const UI = { view: 'nest', ymode: null, ysel: [], mode: null, room: null, sel: [], ghost: null, dpath: [], tab: null, sheet: null, selRoom: null, speed: 1, paused: false, running: false, marker: null };
 let menuDiff = 'easy', menuBiome = 'backyard';
 const HOLD_MS = 350;
 const fmt = n => Math.floor(n).toString();
@@ -70,7 +70,7 @@ function hud() {
   const ns = count('soldier'); $('btn-army').classList.toggle('hidden', ns === 0); $('army-n').textContent = ns; $('btn-army').classList.toggle('sel', UI.sel.length > 0);
   $('btn-view').textContent = cam.y > 60 ? '⬆ Surface' : '⬇ Nest';
   if (UI.tab === 'colony' && !UI.selRoom) renderColony(); else if (UI.selRoom) renderRoomInfo(); else if (UI.tab === 'rooms' && UI.mode !== 'room' && !$('sheet').classList.contains('hidden')) renderRooms(true);
-  updateMode();
+  updateMode(); yardHud();
 }
 $('alert-b').onclick = () => { doFix($('alert-b').dataset.fix || 'harvester'); hud(); };
 
@@ -142,6 +142,7 @@ function setMode(m, k) {
   updateMode(); requestAnimationFrame(measureHud);
 }
 function updateMode() {
+  if (UI.view === 'yard') { yardMode(); return; }
   const el = $('mode'); let t = '', btn = '', extra = '';
   if (UI.mode === 'dig') { t = '⛏ <b>Dig mode</b> — drag from a tunnel. 1 🍯 per cell. Two fingers move the map.'; btn = '✓ Done'; }
   else if (UI.mode === 'fill') { t = '🧹 <b>Fill mode</b> — tap or drag over planned digs (refund) or tunnels to fill them.'; btn = '✓ Done'; }
@@ -166,7 +167,7 @@ const cellAtScreen = (sx, sy) => { const w = s2w(sx, sy); const x = Math.floor(w
 function ghostAt(sx, sy) { const d = ROOMS[UI.room], w = s2w(sx, sy - 30); return { x: Math.round(w.x / CS - d.w / 2), y: Math.round(w.y / CS - d.h / 2) }; }
 function addDigCell(i) { if (i < 0) return; const p = UI.dpath; if (!p.length) { p.push(i); return; } const l = p[p.length - 1]; if (l === i) return; for (const [x, y] of line4(cx(l), cy(l), cx(i), cy(i)).slice(1)) p.push(idx(x, y)); }
 cv.addEventListener('pointerdown', e => {
-  if (!UI.running) return; cv.setPointerCapture(e.pointerId); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); fly = null;
+  if (!UI.running || UI.view === 'yard') return; cv.setPointerCapture(e.pointerId); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); fly = null;
   if (pointers.size === 1) {
     if (UI.mode === 'dig') { gest = { kind: 'dig' }; UI.dpath = []; addDigCell(cellAtScreen(e.clientX, e.clientY)); }
     else if (UI.mode === 'fill') { gest = { kind: 'fill', hit: new Set(), n: 0 }; fillAt(e.clientX, e.clientY, gest); }
@@ -179,7 +180,7 @@ cv.addEventListener('pointerdown', e => {
   }
 });
 cv.addEventListener('pointermove', e => {
-  if (!UI.running || !pointers.has(e.pointerId)) return;
+  if (!UI.running || UI.view === 'yard' || !pointers.has(e.pointerId)) return;
   const p = pointers.get(e.pointerId), px = p.x, py = p.y; p.x = e.clientX; p.y = e.clientY; if (!gest) return;
   if (gest.kind === 'pinch' && pointers.size >= 2) { const [a, b] = [...pointers.values()]; cam.z = gest.z0 * Math.hypot(a.x - b.x, a.y - b.y) / Math.max(1, gest.d0); clampCam();
     const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, cyv = (VIEW.top + H - VIEW.bot) / 2; cam.x = gest.w0.x - (mx - W / 2) / cam.z; cam.y = gest.w0.y - (my - cyv) / cam.z; clampCam(); }
@@ -191,7 +192,7 @@ cv.addEventListener('pointermove', e => {
   if (gest.kind === 'pan' || gest.kind === 'pan2') { cam.x -= (e.clientX - px) / cam.z; cam.y -= (e.clientY - py) / cam.z; clampCam(); }
 });
 function endPointer(e, cancel) {
-  if (!UI.running || !pointers.has(e.pointerId)) return; pointers.delete(e.pointerId);
+  if (!UI.running || UI.view === 'yard' || !pointers.has(e.pointerId)) return; pointers.delete(e.pointerId);
   if (gest && gest.kind === 'pinch') { gest = pointers.size === 1 ? { kind: 'pan2' } : null; return; }
   if (pointers.size) return;
   const g = gest; gest = null; if (g && g.timer) clearTimeout(g.timer); if (!g || cancel) { UI.dpath = []; return; }
@@ -204,7 +205,7 @@ function endPointer(e, cancel) {
 }
 cv.addEventListener('pointerup', e => endPointer(e, false));
 cv.addEventListener('pointercancel', e => endPointer(e, true));
-cv.addEventListener('wheel', e => { if (!UI.running) return; e.preventDefault(); const w0 = s2w(e.clientX, e.clientY); cam.z *= Math.exp(-e.deltaY * .0015); clampCam(); const cyv = (VIEW.top + H - VIEW.bot) / 2; cam.x = w0.x - (e.clientX - W / 2) / cam.z; cam.y = w0.y - (e.clientY - cyv) / cam.z; clampCam(); }, { passive: false });
+cv.addEventListener('wheel', e => { if (!UI.running || UI.view === 'yard') return; e.preventDefault(); const w0 = s2w(e.clientX, e.clientY); cam.z *= Math.exp(-e.deltaY * .0015); clampCam(); const cyv = (VIEW.top + H - VIEW.bot) / 2; cam.x = w0.x - (e.clientX - W / 2) / cam.z; cam.y = w0.y - (e.clientY - cyv) / cam.z; clampCam(); }, { passive: false });
 function fillAt(sx, sy, g) { const i = cellAtScreen(sx, sy); if (i < 0 || g.hit.has(i)) return; g.hit.add(i); const r = fillCell(i); if (r) g.n++; else if (S.room[i] && !g.warned) { g.warned = 1; toast('Rooms: tap the room (outside Fill mode) to remove it', 'bad'); } else if (r === null && cx(i) === ENT && cy(i) <= 4 && !g.warned) { g.warned = 1; toast('The entrance shaft stays open', 'bad'); } }
 function boxSelect(x0, y0, x1, y1) {
   const l = Math.min(x0, x1), r = Math.max(x0, x1), t = Math.min(y0, y1), b = Math.max(y0, y1);
@@ -286,6 +287,9 @@ const HELP = `<h2>❓ How to play</h2><ul class="help">
   <li>🍃 Leaf-cutters bring leaves to a 🍄 Fungus Garden, which turns them into food.</li>
   <li>🌧 <b>Rain floods the deepest tunnels first.</b> Keep eggs and food high up; build a 💧 Sump deep down to drain water.</li>
   <li>⚔️ <b>Raids</b>: soldiers guard the entrance. A 🔭 Lookout warns you early. Hold a finger, then drag a box to select soldiers; tap to move them or tap the enemy hill to attack.</li>
+  <li>🗺️ <b>Surface map</b>: tap <b>🗺️ Surface</b> for the big yard. <b>🌾/⚔️ Send</b> ants out, tap ants (or hold + drag a box) to select, then tap food, a bug, an enemy hill or the ground. 🚩 sets a rally point.</li>
+  <li>🏴 <b>Rival colonies</b> forage and raid you. Beat their soldiers, then attack the hill to capture it: an outpost gives +6 ant space and steady food.</li>
+  <li>⚠️ <b>Surface dangers</b>: a growing <b>shadow</b> means a foot is about to stomp — move out! A <b>bright spot</b> is a magnifying glass; ants hide under leaves or in a hill. Big bugs need a group of soldiers and drop lots of food. Change danger level in ☰.</li>
   <li>🏰 <b>Win</b> by destroying the enemy ant hill, then keep going in endless mode.</li>
   <li>✌️ Two fingers pan and zoom. ⬆/⬇ jumps between the surface and the nest.</li></ul>`;
 function showStats(win) {
@@ -311,9 +315,10 @@ $('overlay').addEventListener('click', e => {
   else if (o === 'dorestart') { clearSave(); startGame(newState(S.biome, S.diff)); }
   else if (o === 'endless') { S.endless = true; S.raid.next = S.t + 120; closeOverlay(); UI.paused = false; toast('♾️ Endless mode — raids keep coming!', 'goal'); }
   else if (o === 'title') { if (S && !S.over) save(); else clearSave(); S = null; showTitle(); }
+  else if (o === 'hz') { const L = ['off', 'easy', 'hard'], n = L[(L.indexOf(S.yard.hzLevel) + 1) % 3]; setHazLevel(n); showMenu(); toast(`⚙️ Surface hazards: ${HZ_TXT[n]}`); }
   else if (o === 'goalsclose') { closeOverlay(); UI.paused = false; }
 });
-function showMenu() { UI.paused = true; overlay(`<h2>⏸ Paused</h2><button class="big green" data-o="resume">▶ Resume</button><button class="big" data-o="help">❓ How to play</button><button class="big" data-o="restart">↺ Restart</button><button class="big ghost" data-o="quit">💾 Save & quit to title</button>`); }
+function showMenu() { UI.paused = true; overlay(`<h2>⏸ Paused</h2><button class="big green" data-o="resume">▶ Resume</button><button class="big" data-o="hz">⚙️ Surface hazards: <b>${HZ_TXT[S.yard.hzLevel]}</b></button><button class="big" data-o="help">❓ How to play</button><button class="big" data-o="restart">↺ Restart</button><button class="big ghost" data-o="quit">💾 Save & quit to title</button>`); }
 $('btn-menu').onclick = showMenu;
 $('btn-pause').onclick = () => { UI.paused = !UI.paused; $('btn-pause').textContent = UI.paused ? '▶' : '⏸'; toast(UI.paused ? '⏸ Paused' : '▶ Resumed'); };
 $('btn-speed').onclick = () => { UI.speed = UI.speed === 1 ? 2 : UI.speed === 2 ? 3 : 1; $('btn-speed').textContent = UI.speed + '×'; $('btn-speed').classList.toggle('on', UI.speed > 1); };
@@ -324,7 +329,7 @@ function startGame(s, cont) {
   inc = new Array(12).fill(0); parts.length = 0; events.length = 0; closeOverlay(); $('hud').classList.remove('hidden'); closeSheet(); setMode(null);
   let tutDone = false; try { tutDone = localStorage.getItem(TUT_KEY) === '1'; } catch (e) {} if (!cont && tutDone) S.tut = TUT.length;
   requestAnimationFrame(() => { measureHud(); cam.z = 1.15; cam.x = ENTX + 50; cam.y = cont ? 60 : -30; clampCam(); });
-  $('coach-t').dataset.k = ''; hud(); tutTick(); if (!cont) save();
+  $('coach-t').dataset.k = ''; setView('nest', true); hud(); tutTick(); if (!cont) save();
 }
 function gameOver() {
   UI.paused = true; clearSave();
@@ -332,7 +337,7 @@ function gameOver() {
 }
 function victory() {
   UI.paused = true; save();
-  overlay(`<h2 class="win">🏆 Victory!</h2><p class="bdesc">The enemy hill has fallen. The surface is yours!</p>${showStats(true)}<button class="big green" data-o="endless">♾️ Keep playing (endless)</button><button class="big ghost" data-o="title">🏠 Title</button>`);
+  overlay(`<h2 class="win">🏆 Victory!</h2><p class="bdesc">${S.hill.dead ? 'The enemy hill has fallen.' : 'Every rival colony is now your outpost.'} The yard is yours!</p>${showStats(true)}<button class="big green" data-o="endless">♾️ Keep playing (endless)</button><button class="big ghost" data-o="title">🏠 Title</button>`);
 }
 
 // ---------- loop ----------
@@ -344,9 +349,9 @@ function frame(now) {
   if (!UI.running && S && !fly) { cam.x += Math.sin(t * .1) * .15; }
   if (S) {
     while (events.length) { const ev = events.shift(); if (!UI.running) continue;
-      if (ev.toast) toast(ev.toast, ev.kind === 'goal' ? 'goal' : ev.kind); if (ev.over) setTimeout(gameOver, 900); if (ev.victory) setTimeout(victory, 900); }
+      if (ev.toast) toast(ev.toast, ev.kind === 'goal' ? 'goal' : ev.kind); if (ev.over) setTimeout(gameOver, 900); if (ev.victory) setTimeout(victory, 900); if (ev.shake) yShake = Math.max(yShake, ev.shake); }
     UI.sel = UI.sel.filter(id => S.units.some(u => u.id === id));
-    render(t);
+    if (UI.view === 'yard') renderYard(t, dt); else render(t);
     if (UI.running) { hudT -= dt; if (hudT <= 0) { hudT = .25; hud(); tutTick(); } saveT += dt; if (saveT > 15) { saveT = 0; save(); } }
   }
   requestAnimationFrame(frame);

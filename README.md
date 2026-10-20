@@ -10,6 +10,10 @@ A mobile-first ant-colony game: dig tunnels in a cutaway nest, raise a queen's b
 - 🏠 **Rooms**: pick one, tap beside a tunnel. Storage, Egg Room, Sleeping Den, Queen Chamber, Nursery, Barracks, Fungus Garden, Pantry, Lookout, Sump.
 - 🐜 **Colony**: ＋/− to turn workers into harvesters, leaf-cutters or soldiers.
 - Rain floods the deepest tunnels first; a deep Sump drains it. Raids come from the enemy hill; a Lookout warns early.
+- 🥚 **Colony → Lay egg** always shows the cost and the exact reason it's blocked, with a one-tap fix. Pick whether new ants hatch as workers or harvesters.
+- 🗺️ **Surface map** (toggle 🕳️ Nest / 🗺️ Surface): a big top-down yard with fog of war and a minimap. 🌾/⚔️ Send ants out, tap or box-select them, then tap food, a bug, a rival hill or the ground. 🚩 sets a rally point, 🏠 recalls.
+- 🏴 2 rival colonies (3 on Hard) forage, fight and raid you. Capture a hill for an outpost: +6 ant space and steady food.
+- ⚠️ Surface dangers, all telegraphed: a growing foot shadow (then STOMP), a magnifying-glass light that chases clusters (hide under leaves or in a hill), and big bugs (spider, beetle, centipede, ladybug) that drop lots of food. Set Off / Easy / Hard in ☰.
 - Hold, then drag a box to select soldiers; tap to move, tap the enemy hill to attack. Destroy it to win, then keep going in endless mode.
 
 Biomes: Backyard, Sand Dunes (sandstorms, fast digging, scarce food), Ice World (cold snaps, slow digging). Seven more are coming soon.

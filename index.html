@@ -36,6 +36,8 @@
   </div>
   <div id="coach" class="hidden"><div id="coach-t"></div><button id="coach-ok" class="sm green hidden">✓ Got it</button><button id="coach-x" title="Skip tutorial">✕</button></div>
   <div id="toasts"></div>
+  <canvas id="mini" class="hidden"></canvas>
+  <div id="vtog"><button id="vt-nest" class="on">🕳️ Nest</button><button id="vt-yard">🗺️ Surface</button></div>
   <div id="fabs"><button id="btn-army" class="fab hidden">⚔️ Soldiers <span id="army-n">0</span></button><button id="btn-view" class="fab">⬇ Nest</button></div>
   <div id="bottom">
     <div id="mode" class="hidden"></div>
@@ -46,11 +48,20 @@
       <button id="tab-colony" data-tab="colony"><i>🐜</i>Colony</button>
       <button id="tab-fill" data-tab="fill"><i>🧹</i>Fill</button>
     </div>
+    <div id="ytabs" class="hidden">
+      <button id="yb-harv"><i>🌾</i><span>Send</span></button>
+      <button id="yb-sold"><i>⚔️</i><span>Send</span></button>
+      <button id="yb-sel"><i>✋</i><span>Select</span></button>
+      <button id="yb-rally"><i>🚩</i><span>Rally</span></button>
+      <button id="yb-home"><i>🏠</i><span>Recall</span></button>
+    </div>
   </div>
 </div>
 <div id="overlay" class="hidden"><div class="card" id="ov-card"></div></div>
 <script src="sim.js"></script>
+<script src="yard.js"></script>
 <script src="draw.js"></script>
 <script src="ui.js"></script>
+<script src="yardui.js"></script>
 </body>
 </html>

@@ -43,10 +43,10 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulat
 .fab.sel{background:linear-gradient(#ffd36b,#e09a2a);color:var(--ink)}
 #army-n{background:#0005;border-radius:10px;padding:1px 7px;margin-left:2px}
 #bottom{position:fixed;left:0;right:0;bottom:0;z-index:5;padding:0 var(--sr) var(--sb) var(--sl);border-top:3px solid #a5743f;box-shadow:0 -3px 10px #0007;border-radius:16px 16px 0 0}
-#tabs{display:flex;gap:5px;padding:6px 6px 6px}
-#tabs button{flex:1;height:58px;border-radius:14px;background:#2c1a0d;color:#e8d3a8;border:1.5px solid #8a5f33;font-size:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
-#tabs button i{font-style:normal;font-size:22px}
-#tabs button.on{background:linear-gradient(#ffe7a8,#f2c15a);color:var(--ink);border-color:#fff2c8}
+#tabs,#ytabs{display:flex;gap:5px;padding:6px 6px 6px}
+#tabs button,#ytabs button{flex:1;height:58px;border-radius:14px;background:#2c1a0d;color:#e8d3a8;border:1.5px solid #8a5f33;font-size:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+#tabs button i,#ytabs button i{font-style:normal;font-size:22px}
+#tabs button.on,#ytabs button.on{background:linear-gradient(#ffe7a8,#f2c15a);color:var(--ink);border-color:#fff2c8}
 #mode{display:flex;align-items:center;gap:6px;margin:6px 6px 0;background:#ffe7a8;color:var(--ink);border:2px solid #fff6d8;border-radius:12px;padding:6px 6px 6px 10px;font-size:13px;line-height:1.25;animation:glow 1.6s infinite}
 #mode span{flex:1}#mode b{color:#8a3a10}#mode .sm{height:44px;font-size:14px;white-space:nowrap}
 @keyframes glow{50%{box-shadow:0 0 0 3px #ffd36b88}}
@@ -87,14 +87,27 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulat
 .help{padding-left:2px;list-style:none;margin:0}.help li{margin:6px 0;font-size:14px;line-height:1.35;font-weight:600}
 .goals{list-style:none;padding:0;margin:0}.goals li{padding:6px 4px;border-bottom:1px dashed #d9bf8c;font-size:14px}.goals li.done{color:#3f8a2a;text-decoration:line-through}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:8px 0}.stats div{background:#fff8e6;border:1.5px solid #e2c48a;border-radius:10px;text-align:center;padding:5px 2px}.stats b{display:block;font-size:18px}.stats small{font-size:10.5px;color:#7a5530}
+
+#ytabs button span{font-size:12.5px;white-space:nowrap}#ytabs button b{color:#ffe08a}#ytabs button.on b{color:#7a3a10}
+#ytabs button.off{opacity:.5}
+#vtog{position:fixed;z-index:4;left:calc(var(--sl) + 8px);bottom:calc(var(--sb) + 92px);display:flex;border-radius:26px;overflow:hidden;border:2px solid #d4a463;box-shadow:0 3px 10px #0009}
+#vtog button{height:50px;padding:0 13px;font-size:15px;background:linear-gradient(#6b4426,#4a2c17);color:var(--parch);white-space:nowrap}
+#vtog button+button{border-left:1.5px solid #a5743f}
+#vtog button.on{background:linear-gradient(#ffe7a8,#f2c15a);color:var(--ink)}
+#vtog button small{font-size:11px;opacity:.85}
+#vtog button.alarm{background:linear-gradient(#e05a48,#a5281c);color:#fff;animation:pulse3 1s infinite}
+@keyframes pulse3{50%{filter:brightness(1.35)}}
+#mini{position:fixed;z-index:4;right:calc(var(--sr) + 8px);bottom:calc(var(--sb) + 92px);width:116px;height:116px;border:2.5px solid #d4a463;border-radius:12px;box-shadow:0 3px 10px #0009;background:#2a3a26;touch-action:none}
 @media (orientation:landscape) and (max-height:500px){
   #top{left:0;right:auto;width:min(520px,62vw);border-radius:0 0 16px 0;padding-top:calc(var(--st) + 3px)}
   #roles{display:none}#res .r i{font-size:16px}.r b{font-size:14px}#bar2{margin-top:3px}.sm{height:32px}#status{height:32px;line-height:29px}
   #bottom{left:auto;right:0;width:min(380px,44vw);border-radius:16px 0 0 0}
-  #tabs button{height:46px;font-size:11px}#tabs button i{font-size:18px}
+  #tabs button{height:46px;font-size:11px}#tabs button i,#ytabs button i{font-size:18px}
   #sheet{max-height:52vh}#fabs{right:auto;left:calc(var(--sl) + 8px);bottom:calc(var(--sb) + 10px);align-items:flex-start}
   #coach{right:auto;width:min(420px,52vw);bottom:calc(var(--sb) + 64px);font-size:13px}
   #toasts{top:calc(var(--st) + 110px)}
+  #vtog{bottom:calc(var(--sb) + 10px)}#vtog button{height:42px;font-size:13px}#fabs{bottom:calc(var(--sb) + 62px)}#ytabs button{height:46px;font-size:11px}
+  #mini{top:auto;bottom:calc(var(--sb) + 10px);right:calc(min(380px,44vw) + 10px);width:96px;height:96px}
   #overlay.title{align-items:center;background:#0007}#ov-card{max-width:600px}.logo h1{font-size:32px}
 }
 

@@ -1,6 +1,6 @@
 'use strict';
 // ================= Ant Haven — simulation =================
-const VERSION = 'ah-v1.0.1';
+const VERSION = 'ah-v1.1.0';
 const CS = 24, COLS = 64, ROWS = 34, ENT = 32, SURF_H = 300, NC = COLS * ROWS;
 const WW = COLS * CS, WH = ROWS * CS, ENTX = (ENT + .5) * CS, ENTI = ENT;  // entrance cell (ENT,0)
 const SOIL = 0, DUG = 1, PLAN = 2, ROCK = 3;
@@ -113,6 +113,7 @@ function newState(bk, dk, seed) {
   for (let i = 0; i < 4; i++) addU('worker', (ENT - 1.5 + i) * CS, 6.4 * CS);
   for (let i = 0; i < 2; i++) addU('harvester', ENTX - 20 + i * 40, -6);
   for (let i = 0; i < dif.guards; i++) addU('guard', s.hill.x - 30 + i * 18, -6);
+  s.yard = newYard(seed, dk);
   nestDirty = true; computeWater(); return s;
 }
 function addU(k, x, y) {
@@ -130,7 +131,7 @@ const roomsOf = k => S.rooms.filter(r => r.k === k);
 const has = k => S.rooms.some(r => r.k === k && r.done);
 const doneRooms = () => S.rooms.filter(r => r.done);
 function sumRoom(f) { let n = 0; for (const r of S.rooms) if (r.done && ROOMS[r.k][f]) n += ROOMS[r.k][f]; return n; }
-const foodCap = () => sumRoom('cap'), eggCap = () => sumRoom('eggs'), popCap = () => sumRoom('pop');
+const foodCap = () => sumRoom('cap'), eggCap = () => sumRoom('eggs'), popCap = () => sumRoom('pop') + (S.yard ? S.yard.cols.filter(c => c.own === 'me').length * OUT_POP : 0);
 const roomCells = r => { const a = []; for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) a.push(idx(x, y)); return a; };
 const roomById = id => S.rooms.find(r => r.id === id);
 function roomFlooded(r) { let n = 0; const c = roomCells(r); for (const i of c) if (wl[i] > .5) n++; return n * 2 > c.length; }
@@ -277,7 +278,7 @@ function canLay() {   // why the queen can / can't lay right now, plus a one-tap
 }
 function layEgg(as) { const v = canLay(); if (!v.ok) return v; S.res.food -= EGG_FOOD; S.eggs.push({ rid: eggRoomWithSpace().id, t: 0, wet: 0, ox: rnd(), oy: rnd(), as: as || S.hatchAs || 'worker' }); return { ok: true }; }
 function pickConvert(k) {  // choose an ant of role k to convert (prefer idle, not carrying)
-  const c = S.units.filter(u => u.k === k && !u.train); if (!c.length) return null;
+  const c = S.units.filter(u => u.k === k && !u.train && !u.yd); if (!c.length) return null;
   c.sort((a, b) => (a.carry ? 1 : 0) - (b.carry ? 1 : 0) || (a.job >= 0 ? 1 : 0) - (b.job >= 0 ? 1 : 0)); return c[0];
 }
 function canTrain(k) {
@@ -299,14 +300,14 @@ function assign(k, dir) {   // dir +1: convert a worker into k; -1: convert a k 
 }
 function setRole(u, k) { const f = u.hp / u.max; u.k = k; u.max = UT[k].hp; u.hp = Math.max(1, Math.round(u.max * f)); u.st = 'idle'; u.job = -1; u.carry = 0; u.mode = 'guard'; u.wait = 0; u.train = 0; }
 function orderSoldiers(ids, x, y, attack) {
-  let n = 0; for (const id of ids) { const u = uById(id); if (!u || u.k !== 'soldier') continue;
+  let n = 0; for (const id of ids) { const u = uById(id); if (!u || u.k !== 'soldier' || u.yd) continue;
     if (attack) { u.mode = 'attack'; u.path = []; u.rt = 0; } else { u.mode = 'move'; const gx = x + (n % 4 - 1.5) * 9, gy = isUnder(y) ? y : -3 - (n % 3) * 3; u.tx = gx; u.ty = gy; if (!route(u, gx, gy)) { u.mode = 'guard'; continue; } }
     n++; } return n;
 }
 function guardSoldiers(ids) { for (const id of ids) { const u = uById(id); if (u && u.k === 'soldier') { u.mode = 'guard'; u.path = []; } } }
 
 // ---------------- AI ----------------
-function enemyNear(u, r, filter) { let best = null, bd = r; for (const e of S.units) { if (e.tm === u.tm || e.hp <= 0) continue; if (filter && !filter(e)) continue; const d = dist(u, e); if (d < bd) { bd = d; best = e; } } return best; }
+function enemyNear(u, r, filter) { let best = null, bd = r; for (const e of S.units) { if (e.tm === u.tm || e.hp <= 0 || !e.yd !== !u.yd) continue; if (filter && !filter(e)) continue; const d = dist(u, e); if (d < bd) { bd = d; best = e; } } return best; }
 function hit(u, e, dt) { e.hp -= UT[u.k].dps * dt; u.atk = .25; u.ang = Math.atan2(e.y - u.y, e.x - u.x); e.lastHit = u.id;
   if (rnd() < dt * 4) parts.push({ x: (u.x + e.x) / 2, y: (u.y + e.y) / 2 - 3, vx: (rnd() - .5) * 40, vy: -20 - rnd() * 30, t: .4, c: '#fff6c8', r: 1.2 }); }
 function engage(u, e, dt) {
@@ -448,7 +449,7 @@ function eventsTick(dt) {
   if (bio.hazard) {
     if (!H.on && !H.warned && S.t > H.next - 14) { H.warned = true; say(`${bio.hazard.icon} ${bio.hazard.name} in 14s! Ants will hide underground.`, 'warn'); }
     if (!H.on && S.t >= H.next) { H.on = true; H.t = bio.hazard.dur; H.n++; }
-    if (H.on) { H.t -= dt; for (const u of S.units) if (!isUnder(u.y) && u.k !== 'guard') u.hp -= (bio.hazard.kind === 'cold' ? .45 : .6) * dt;
+    if (H.on) { H.t -= dt; for (const u of S.units) if (!u.yd && !isUnder(u.y) && u.k !== 'guard') u.hp -= (bio.hazard.kind === 'cold' ? .45 : .6) * dt;
       if (H.t <= 0) { H.on = false; H.warned = false; H.next = S.t + bio.hazard.every * (.8 + rnd() * .4); if (W.next - S.t < 25) W.next = S.t + 25; } }
   }
   // raids
@@ -514,6 +515,9 @@ const GOALS = [
   ['leaves', 'Deliver 5 leaves', () => S.st.leaves >= 5],
   ['nursery', 'Build a Nursery', () => has('nursery')],
   ['raid', 'Survive a raid', () => S.st.raids >= 1],
+  ['yard', 'Send ants out on the Surface map', () => S.flags.yard],
+  ['bug', 'Defeat a big bug', () => (S.st.bugs || 0) >= 1],
+  ['outpost', 'Capture a rival ant hill', () => (S.st.captured || 0) >= 1],
   ['hill', 'Destroy the enemy ant hill', () => S.hill.dead],
 ];
 function goalsTick() { for (const [id, name, f] of GOALS) if (!S.goals[id] && f()) { S.goals[id] = S.t; if (id !== 'hill') S.res.food = Math.min(foodCap(), S.res.food + GOAL_REWARD); say(`🎯 Goal done: ${name}${id !== 'hill' ? ` (+${GOAL_REWARD} 🍯)` : ''}`, 'goal'); } }
@@ -529,15 +533,17 @@ function step(dt) {
   colonyTick(dt); itemsTick(dt);
   claimSet = new Set(); for (const u of S.units) if (u.job >= 0) claimSet.add(u.job);
   for (const u of S.units) {
+    if (u.yd) continue;
     u.mv = 0; u.dig = 0; if (u.atk > 0) u.atk -= dt;
     switch (u.k) { case 'worker': thinkWorker(u, dt); break; case 'harvester': thinkForager(u, dt, false); break; case 'cutter': u.train > 0 ? thinkSoldier(u, dt) : thinkForager(u, dt, true); break;
       case 'soldier': thinkSoldier(u, dt); break; case 'queen': thinkQueen(u, dt); break; case 'raider': thinkRaider(u, dt); break; case 'guard': thinkGuard(u, dt); break; }
     if (isUnder(u.y)) { const c = cellOf(u.x, u.y); if (wl[c] > .6) u.hp -= .35 * dt; }
     if (u.tm === 0 && !isUnder(u.y)) { const c = Math.floor(u.x / CS); for (let x = c - 4; x <= c + 4; x++) if (x >= 0 && x < COLS) S.fog[x] = 1; }
   }
+  if (S.yard) yardTick(dt);
   for (let k = S.units.length - 1; k >= 0; k--) { const u = S.units[k];
     if (u.hp <= 0 || u.gone) { S.units.splice(k, 1);
-      if (u.hp <= 0) { for (let j = 0; j < 8; j++) parts.push({ x: u.x, y: u.y, vx: (rnd() - .5) * 70, vy: -rnd() * 60, t: .8, c: u.tm ? '#3a2a4a' : '#7a3a1a', r: 1.5 });
+      if (u.hp <= 0) { for (let j = 0; j < 8; j++) (u.yd ? yparts : parts).push({ x: u.x, y: u.y, vx: (rnd() - .5) * 70, vy: -rnd() * 60, t: .8, c: u.tm ? '#3a2a4a' : '#7a3a1a', r: 1.5 });
         if (u.tm === 0) { S.st.lost++; if (u.k === 'queen') { S.over = true; S.why = S.res.food <= 0 ? 'The queen starved.' : 'The queen was defeated.'; events.push({ over: 1 }); } }
         else { S.st.kills++; if (u.k === 'raider') S.raid.kills++; } }
       if (u.job >= 0) claimSet.delete(u.job); } }
@@ -551,12 +557,13 @@ function step(dt) {
 // ---------------- save / load ----------------
 function serialize() {
   const o = { ...S, grid: Array.from(S.grid), room: Array.from(S.room), digp: Array.from(S.digp, v => Math.round(v * 100) / 100), fog: Array.from(S.fog) };
-  o.units = S.units.map(u => ({ ...u, path: [] })); return JSON.stringify(o);
+  o.units = S.units.map(u => ({ ...u, path: [] })); if (S.yard) { o.yard = { ...S.yard }; delete o.yard._obs; } return JSON.stringify(o);
 }
 function restore(o) {
   if (!o || o.v !== 1 || !BIOMES[o.biome]) return false;
   o.grid = Uint8Array.from(o.grid); o.room = Int16Array.from(o.room); o.digp = Float32Array.from(o.digp); o.fog = Uint8Array.from(o.fog);
   for (const u of o.units) { u.path = []; if (u.k === 'worker') { u.job = -1; u.st = 'idle'; } if (u.st === 'go' || u.st === 'home' || u.st === 'take') u.st = 'idle'; if (u.k === 'soldier' && u.mode === 'move') u.mode = 'guard'; }
+  if (!o.yard) o.yard = newYard(o.seed, o.diff); delete o.yard._obs;
   S = o; nestDirty = true; computeWater(); return true;
 }
 let memSave = null;
