@@ -328,7 +328,7 @@ function startGame(s, cont) {
   S = s; delete S.demo; UI.running = true; UI.paused = false; UI.sel = []; UI.speed = 1; $('btn-speed').textContent = '1×'; $('btn-speed').classList.remove('on'); $('btn-pause').textContent = '⏸';
   inc = new Array(12).fill(0); parts.length = 0; events.length = 0; closeOverlay(); $('hud').classList.remove('hidden'); closeSheet(); setMode(null);
   let tutDone = false; try { tutDone = localStorage.getItem(TUT_KEY) === '1'; } catch (e) {} if (!cont && tutDone) S.tut = TUT.length;
-  requestAnimationFrame(() => { measureHud(); cam.z = 1.15; cam.x = ENTX + 50; cam.y = cont ? 60 : -30; clampCam(); });
+  requestAnimationFrame(() => { measureHud(); cam.z = 1.15 * uiScale(); cam.x = ENTX + 50; cam.y = cont ? 60 : -30; clampCam(); });
   $('coach-t').dataset.k = ''; setView('nest', true); hud(); tutTick(); if (!cont) save();
 }
 function gameOver() {
@@ -356,7 +356,9 @@ function frame(now) {
   }
   requestAnimationFrame(frame);
 }
-addEventListener('resize', () => { resize(); });
+let rzT = 0; function onResize() { resize(); clearTimeout(rzT); rzT = setTimeout(() => { resize(); requestAnimationFrame(measureHud); }, 350); }   // iOS reports the new size late after rotating
+addEventListener('resize', onResize); addEventListener('orientationchange', onResize); if (window.visualViewport) visualViewport.addEventListener('resize', onResize);
+if (window.screen && screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', onResize);
 document.addEventListener('visibilitychange', () => { if (document.hidden && UI.running) save(); });
 addEventListener('pagehide', () => { if (UI.running) save(); });
 resize(); showTitle(); requestAnimationFrame(frame);
@@ -365,4 +367,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (!had || reloading) return; reloading = true; if (UI.running) save(); location.reload(); });
   navigator.serviceWorker.register('sw.js').then(r => { r.update(); document.addEventListener('visibilitychange', () => { if (!document.hidden) r.update(); }); }).catch(() => {});
 }
-window.AH = { get S() { return S; }, set S(v) { S = v; }, step, newState, startGame, restore, serialize, save, loadSaved, clearSave, cam, w2s, s2w, UI, CS, COLS, ROWS, ENT, ENTX, idx, cx, cy, digPlan, commitDig, placeRoom, canRoom, assign, orderSoldiers, units, count, adults, has, roomsOf, foodCap, popCap, eggCap, wl, computeWater, GOALS, TUT, HOLD_MS, setMode, openTab, handleTap, route, ROOMS, VERSION, layReason, netPerMin, canLay, layEgg, fillCell, showTitle, addU, get parts() { return parts; } };
+window.AH = { VIEW_TOP: () => VIEW.top, VIEW_BOT: () => VIEW.bot, uiScale, IS_TOUCH, get S() { return S; }, set S(v) { S = v; }, step, newState, startGame, restore, serialize, save, loadSaved, clearSave, cam, w2s, s2w, UI, CS, COLS, ROWS, ENT, ENTX, idx, cx, cy, digPlan, commitDig, placeRoom, canRoom, assign, orderSoldiers, units, count, adults, has, roomsOf, foodCap, popCap, eggCap, wl, computeWater, GOALS, TUT, HOLD_MS, setMode, openTab, handleTap, route, ROOMS, VERSION, layReason, netPerMin, canLay, layEgg, fillCell, showTitle, addU, get parts() { return parts; } };

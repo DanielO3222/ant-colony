@@ -15,7 +15,12 @@ function w2s(x, y) { return { x: (x - cam.x) * cam.z + W / 2, y: (y - cam.y) * c
 function s2w(x, y) { return { x: (x - W / 2) / cam.z + cam.x, y: (y - (VIEW.top + (H - VIEW.bot)) / 2) / cam.z + cam.y }; }
 function clampCam() { const vh = H - VIEW.top - VIEW.bot; cam.z = clamp(cam.z, Math.max(.3, W / WW), 3.2);
   const hw = W / 2 / cam.z, hh = vh / 2 / cam.z; cam.x = clamp(cam.x, Math.min(hw, WW / 2), Math.max(WW - hw, WW / 2)); cam.y = clamp(cam.y, -SURF_H + hh * .6, WH - hh * .7); }
-function resize() { DPR = Math.min(2, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); measureHud(); clampCam(); }
+const IS_TOUCH = (navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window;   // iPadOS Safari reports as a Mac, so feature-detect
+document.documentElement.classList.toggle('touch', IS_TOUCH);
+const uiScale = () => clamp(Math.min(W, H) / 430, 1, 1.45);   // bigger default zoom on tablets
+function resize() { DPR = Math.min(2, window.devicePixelRatio || 1); const vv = window.visualViewport; W = Math.round(innerWidth || (vv && vv.width) || 390); H = Math.round(innerHeight || (vv && vv.height) || 844);
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  document.documentElement.classList.toggle('tablet', Math.min(W, H) >= 700); measureHud(); clampCam(); if (typeof yClamp === 'function') yClamp(); }
 function measureHud() { const t = document.getElementById('top'), b = document.getElementById('bottom');
   const shown = t && !document.getElementById('hud').classList.contains('hidden'); VIEW.top = shown ? t.getBoundingClientRect().bottom : 0; VIEW.bot = shown ? H - b.getBoundingClientRect().top : 0;
   const land = W > H && H < 500, co = document.getElementById('coach'), fb = document.getElementById('fabs'), ts = document.getElementById('toasts'), sheet = document.getElementById('sheet');

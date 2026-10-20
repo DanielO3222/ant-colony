@@ -3,7 +3,7 @@
   --font:ui-rounded,"SF Pro Rounded","Nunito","Varela Round",-apple-system,system-ui,"Segoe UI",Roboto,sans-serif}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 html,body{margin:0;height:100%;overflow:hidden;background:#21120a;font:700 14px/1.2 var(--font);color:var(--ink);overscroll-behavior:none;touch-action:none}
-#cv{position:fixed;inset:0;width:100vw;height:100vh;display:block;touch-action:none}
+#cv{position:fixed;left:0;top:0;width:100%;height:100%;display:block;touch-action:none}
 button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulation}
 .hidden{display:none!important}
 .panel,#top,#bottom{background:linear-gradient(#6b4426,#4a2c17);color:var(--parch)}
@@ -115,3 +115,32 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulat
 .brood.blocked{border-color:#e07a5a;background:#fbe0d0}.brood .bw{font-size:13px}.brood.blocked .bw{color:#a5281c}
 .brood .bb{display:flex;gap:6px;flex-wrap:wrap}.brood .bb .sm{height:42px;font-size:14px}.sm.off{filter:grayscale(.8);opacity:.6}
 .brood .bh2{display:flex;align-items:center;gap:4px}.seg{height:36px;padding:0 9px;border-radius:10px;background:#e8d3a8;border:2px solid #c9a36e;font-size:13px}.seg.on{background:linear-gradient(#ffe7a8,#f2c15a);border-color:#a5743f}
+
+/* ---------- tablets (iPad etc.): centered, larger HUD; phones unaffected ---------- */
+html.tablet body{font-size:17px}
+html.tablet #top>*,html.tablet #tabs,html.tablet #ytabs,html.tablet #mode,html.tablet #sheet{max-width:860px;margin-left:auto;margin-right:auto}
+html.tablet #top{padding:calc(var(--st) + 8px) calc(var(--sr) + 12px) 8px calc(var(--sl) + 12px)}
+html.tablet #res{gap:8px}html.tablet .r{padding:5px 9px;border-radius:14px}html.tablet .r i{font-size:28px}html.tablet .r b{font-size:23px}html.tablet .r small{font-size:14px}html.tablet .r u{font-size:12px}
+html.tablet #roles{font-size:14px;justify-content:space-around;margin-top:6px}html.tablet #roles b{font-size:16px}
+html.tablet #bar2{gap:8px;margin-top:6px}html.tablet .sm{height:48px;min-width:58px;font-size:19px;border-radius:12px}
+html.tablet #status{height:48px;line-height:45px;font-size:17px}
+html.tablet #alert{font-size:17px;min-height:50px;padding:6px 10px}html.tablet #alert .sm{height:44px}
+html.tablet #tabs,html.tablet #ytabs{gap:8px;padding:8px}
+html.tablet #tabs button,html.tablet #ytabs button{height:76px;font-size:16px;border-radius:16px}
+html.tablet #tabs button i,html.tablet #ytabs button i{font-size:30px}html.tablet #ytabs button span{font-size:16px}
+html.tablet #mode{font-size:17px;padding:8px 8px 8px 14px}html.tablet #mode .sm{height:52px;font-size:17px}
+html.tablet #sheet{max-height:46vh;padding:12px}html.tablet .sh-h b{font-size:20px}html.tablet .sh-h span{font-size:15px}html.tablet .sh-h .x{width:50px;height:50px;font-size:20px}
+html.tablet .cards{grid-template-columns:1fr 1fr 1fr;gap:8px}html.tablet .rcard{min-height:78px;padding:8px 8px 8px 50px}html.tablet .rcard i{font-size:30px}html.tablet .rcard b{font-size:16px}html.tablet .rcard small{font-size:13px}html.tablet .rcard em{font-size:14px}
+html.tablet .role{padding:8px 10px;margin-top:7px}html.tablet .role i{font-size:30px}html.tablet .role small{font-size:14px}html.tablet .pm{width:66px;height:58px;font-size:27px}
+html.tablet .brood{font-size:15.5px}html.tablet .brood .bw{font-size:16px}html.tablet .brood .bb .sm{height:52px;font-size:17px}html.tablet .seg{height:46px;font-size:16px;padding:0 14px}
+html.tablet .qrow{font-size:15px}html.tablet .tip{font-size:14.5px}html.tablet .wide{height:56px;font-size:18px}
+html.tablet #coach{left:50%;right:auto;transform:translateX(-50%);width:min(640px,92vw);font-size:19px;padding:14px 50px 14px 16px}html.tablet #coach .step{font-size:15px}html.tablet #coach-x{width:46px;height:46px;font-size:22px}
+html.tablet .toast{font-size:18px;padding:10px 18px;max-width:640px}html.tablet .toast.goal{font-size:19px}
+html.tablet .fab{height:58px;font-size:18px;padding:0 20px;border-radius:30px}
+html.tablet #vtog{border-radius:32px}html.tablet #vtog button{height:62px;font-size:19px;padding:0 20px}html.tablet #vtog button small{font-size:14px}
+html.tablet #mini{width:180px;height:180px;border-radius:16px}
+html.tablet #ov-card{max-width:600px;padding:22px;border-radius:24px}html.tablet #ov-card h2{font-size:28px}
+html.tablet .logo span{font-size:46px}html.tablet .logo h1{font-size:62px}html.tablet .logo p{font-size:17px}
+html.tablet .bio{height:84px;font-size:15px}html.tablet .bio i{font-size:28px}html.tablet .bdesc{font-size:16px}
+html.tablet .diff button{height:56px;font-size:19px}html.tablet .big{height:64px;font-size:21px;border-radius:16px;margin-top:10px}html.tablet .big small{font-size:13px}html.tablet .ver{font-size:12px}
+html.tablet .help li{font-size:17px}html.tablet .goals li{font-size:17px;padding:8px 4px}html.tablet .stats div{padding:8px}

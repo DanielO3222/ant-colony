@@ -14,7 +14,7 @@ function yFlyTo(x, y, z) { yfly = { x, y, z: z || ycam.z, t: 0, x0: ycam.x, y0: 
 // ---------- view toggle ----------
 function setView(v, quiet) {
   UI.view = v; UI.ysel = []; UI.ymode = null; ypointers.clear(); ygest = null;
-  if (quiet && v === 'nest') { ycam.x = HOME.x; ycam.y = HOME.y - 60; ycam.z = 1.1; yfly = null; }
+  if (quiet && v === 'nest') { ycam.x = HOME.x; ycam.y = HOME.y - 60; ycam.z = 1.1 * uiScale(); yfly = null; }
   if (v === 'yard') { closeSheet(); setMode(null); UI.sel = []; if (!quiet && !S.flags.yhelp) { S.flags.yhelp = 1; toast('🗺️ The Surface! Tap 🌾 Send to put harvesters out, then tap food'); } }
   $('vt-nest').classList.toggle('on', v === 'nest'); $('vt-yard').classList.toggle('on', v === 'yard');
   $('tabs').classList.toggle('hidden', v === 'yard'); $('ytabs').classList.toggle('hidden', v !== 'yard');
@@ -290,7 +290,7 @@ function renderYard(t, dt) {
   drawMini(t);
 }
 let miniT = 0;
-function drawMini(t) { miniT -= 1 / 60; if (miniT > 0) return; miniT = .2; const y = S.yard, d = Math.min(2, DPR), sz = 116;
+function drawMini(t) { miniT -= 1 / 60; if (miniT > 0) return; miniT = .2; const y = S.yard, d = Math.min(2, DPR), sz = mini.clientWidth || 116;
   if (mini.width !== sz * d) { mini.width = sz * d; mini.height = sz * d; } const k = mk2, sc = sz / YW; k.setTransform(d, 0, 0, d, 0, 0);
   k.drawImage(miniBase, 0, 0, sz, sz); k.imageSmoothingEnabled = true; k.drawImage(yfogCv, 0, 0, sz, sz);
   const dot = (x, yy, r, col) => { k.fillStyle = col; k.fillRect(x * sc - r / 2, yy * sc - r / 2, r, r); };
