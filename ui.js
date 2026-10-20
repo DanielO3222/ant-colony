@@ -67,7 +67,7 @@ function hud() {
   if (a) { al.className = 'show ' + a.k; $('alert-t').textContent = a.t; $('alert-b').classList.toggle('hidden', !a.btn); } else al.className = '';
   const ns = count('soldier'); $('btn-army').classList.toggle('hidden', ns === 0); $('army-n').textContent = ns; $('btn-army').classList.toggle('sel', UI.sel.length > 0);
   $('btn-view').textContent = cam.y > 60 ? '⬆ Surface' : '⬇ Nest';
-  if (UI.tab === 'colony' && !UI.selRoom) renderColony(); else if (UI.selRoom) renderRoomInfo(); else if (UI.tab === 'rooms') renderRooms(true);
+  if (UI.tab === 'colony' && !UI.selRoom) renderColony(); else if (UI.selRoom) renderRoomInfo(); else if (UI.tab === 'rooms' && UI.mode !== 'room' && !$('sheet').classList.contains('hidden')) renderRooms(true);
   updateMode();
 }
 $('alert-b').onclick = () => { const r = assign('harvester', 1); toast(r.ok ? '🌾 +1 Harvester' : r.why, r.ok ? '' : 'bad'); hud(); };

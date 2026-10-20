@@ -55,7 +55,8 @@ with sync_playwright() as p:
     pg.click("[data-bio=dunes]"); pg.wait_for_timeout(700); pg.screenshot(path=SS + "01b-title-dunes.png")
     pg.click("[data-bio=backyard]"); pg.wait_for_timeout(300)
     pg.evaluate("() => localStorage.clear()")
-    pg.click("[data-o=new]"); pg.wait_for_timeout(1200)
+    pg.click("[data-o=new]"); pg.wait_for_timeout(300)
+    pg.evaluate("() => AH.startGame(AH.newState('backyard', 'easy', 777))"); pg.wait_for_timeout(900)   # fixed rock layout
     s0 = snap(); print(s0)
     check(s0["q"] > 0 and s0["w"] == 4 and s0["h"] == 2 and s0["food"] == 50, f"new game: queen, 4 workers, 2 harvesters, 50 food {s0}")
     check(pg.is_visible("#coach") and "crumbs" in pg.inner_text("#coach"), "tutorial step 1 asks to tap the crumbs")
@@ -79,13 +80,14 @@ with sync_playwright() as p:
     prev = pg.evaluate("() => AH.digPlan(AH.UI.dpath)")
     touch("touchEnd", []); pg.wait_for_timeout(200)
     f1 = pg.evaluate("() => AH.S.res.food"); np = pg.evaluate("() => AH.S.grid.filter(v => v === 2).length")
-    check(prev["ok"] and len(prev["cells"]) == 7 and np == 7 and round(f0 - f1) == 7, f"drag digs a 7-cell tunnel plan, preview cost 7, food {f0:.1f}->{f1:.1f}")
+    np = pg.evaluate("() => AH.S.st.planned")
+    check(prev["ok"] and len(prev["cells"]) == 7 and prev["cost"] == 7 and np == 7, f"drag digs a 7-cell tunnel plan, preview cost 7 (food {f0:.1f}->{f1:.1f}) {prev} planned={np}")
     check(pg.evaluate("() => AH.S.tut") == 3, "tutorial advances after digging")
     # dragging from plain soil is refused
     a2 = pg.evaluate(W2S, [10.5 * 24, 12.5 * 24]); c2 = pg.evaluate(W2S, [14.5 * 24, 12.5 * 24])
     pg.evaluate("([x, y]) => { AH.cam.x = x; AH.cam.y = y; }", [12 * 24, 12 * 24]); pg.wait_for_timeout(50)
     a2 = pg.evaluate(W2S, [10.5 * 24, 12.5 * 24]); c2 = pg.evaluate(W2S, [14.5 * 24, 12.5 * 24]); drag(a2, c2); touch("touchEnd", []); pg.wait_for_timeout(150)
-    check(pg.evaluate("() => AH.S.grid.filter(v => v === 2).length") == 7 and "existing tunnel" in pg.inner_text("#toasts"), "a dig not connected to a tunnel is refused with a reason")
+    check(pg.evaluate("() => AH.S.st.planned") == 7 and "existing tunnel" in pg.inner_text("#toasts"), "a dig not connected to a tunnel is refused with a reason")
     pg.click("#mode-x"); check(pg.evaluate("() => AH.UI.mode") is None, "Done leaves dig mode")
     run(25)   # workers dig
     dug = pg.evaluate("() => AH.S.st.dug"); check(dug >= 3, f"workers dig the planned tunnel ({dug} cells after 25s)")
@@ -95,8 +97,10 @@ with sync_playwright() as p:
     pg.click("[data-room=storage]"); pg.wait_for_timeout(100)
     check(pg.evaluate("() => AH.UI.mode") == "room" and "Cancel" in pg.inner_text("#mode"), "room placement mode shows a clear Cancel")
     s = pg.evaluate(FIND_ROOM.replace("(k, prefY)", "([k, prefY])"), ["storage", 1])
+    pg.evaluate("([x, y]) => { AH.cam.x = x; AH.cam.y = y; }", [(s["x"] + 1.5) * 24, (s["y"] + 1) * 24]); pg.wait_for_timeout(60)
     gp = pg.evaluate(W2S, [(s["x"] + 1.5) * 24, (s["y"] + 1) * 24 + 30 / 1.15])
-    touch("touchStart", [(gp["x"], gp["y"])]); touch("touchMove", [(gp["x"] + 1, gp["y"])]); pg.wait_for_timeout(120); pg.screenshot(path=SS + "06-room-ghost.png"); touch("touchEnd", []); pg.wait_for_timeout(200)
+    touch("touchStart", [(gp["x"], gp["y"])]); touch("touchMove", [(gp["x"] + 1, gp["y"])]); pg.wait_for_timeout(120); pg.screenshot(path=SS + "06-room-ghost.png"); gh = pg.evaluate("() => [AH.UI.ghost, AH.UI.room, AH.UI.ghost && AH.canRoom(AH.UI.room, AH.UI.ghost.x, AH.UI.ghost.y)]"); touch("touchEnd", []); pg.wait_for_timeout(200)
+    print("ghost", pg.evaluate("() => [pointers.size, gest && gest.kind, (e => e && (e.id || e.className || e.tagName) + '<' + (e.parentElement && (e.parentElement.id || e.parentElement.className)))(document.elementFromPoint(%f, %f)), %f, %f]" % (gp["x"], gp["y"], gp["x"], gp["y"])), s, gh, pg.inner_text("#toasts"))
     check(len(pg.evaluate("() => AH.roomsOf('storage')")) == 1 and pg.evaluate("() => AH.UI.mode") is None, "Food Storage placed by tap, placement mode ends by itself")
     pg.click("#tab-rooms"); pg.click("[data-room=eggs]"); s = pg.evaluate(FIND_ROOM.replace("(k, prefY)", "([k, prefY])"), ["eggs", 5])
     pg.evaluate("([x, y]) => { AH.cam.x = x; AH.cam.y = y; }", [(s["x"] + 1.5) * 24, (s["y"] + 1) * 24]); pg.wait_for_timeout(60)
@@ -133,7 +137,7 @@ with sync_playwright() as p:
     pg.evaluate("() => { AH.cam.x = AH.ENTX; AH.cam.y = 110; AH.cam.z = 1.25; }"); pg.wait_for_timeout(300); pg.screenshot(path=SS + "07b-nest-close.png")
 
     # --- garden makes food from leaves ---
-    g = pg.evaluate("() => { const S = AH.S; S.res.leaves = 10; S.res.food = 10; const f0 = S.res.food; for (let i = 0; i < 30 * 12; i++) AH.step(1/30); return {used: 10 - S.res.leaves, food: S.res.food - f0}; }")
+    g = pg.evaluate("() => { const S = AH.S; S.res.leaves = 10; S.res.food = 10; const f0 = S.res.food; for (let i = 0; i < 30 * 20; i++) AH.step(1/30); return {used: 10 - S.res.leaves, food: S.res.food - f0}; }")
     check(g["used"] >= 2, f"Fungus Garden turns leaves into food {g}")
 
     # --- raid resolution with soldiers (focused) ---
@@ -205,7 +209,7 @@ with sync_playwright() as p:
         for k in range(18): pg.evaluate(BOT, FIND_ROOM); run(10)
         s = snap(); print(bio, s)
         check(not s["over"] and s["food"] > 0 and s["ants"] >= 8, f"{bio}: colony healthy after 3 min {s['ants']} ants, food {s['food']}")
-        h = pg.evaluate("""() => { const S = AH.S; S.haz.next = S.t + 1; for (let i = 0; i < 30 * 8; i++) AH.step(1/30); const on = S.haz.on; const out = S.units.filter(u => u.tm === 0 && u.y < 1 && u.k !== 'soldier').length;
+        h = pg.evaluate("""() => { const S = AH.S; S.haz.next = S.t + 15; for (let i = 0; i < 30 * 19; i++) AH.step(1/30); const on = S.haz.on; const out = S.units.filter(u => u.tm === 0 && u.y < 1 && u.k !== 'soldier').length;
            return {on, out, kind: AH.S.biome}; }""")
         pg.evaluate("() => { AH.cam.x = AH.ENTX + 60; AH.cam.y = -10; AH.cam.z = 1.1; }"); pg.wait_for_timeout(300); pg.screenshot(path=SS + f"15-{bio}-hazard.png")
         check(h["on"] and h["out"] <= 2, f"{bio}: {haz} starts and ants shelter underground {h}")

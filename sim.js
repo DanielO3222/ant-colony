@@ -303,7 +303,7 @@ function engage(u, e, dt) {
   u.rt -= dt; if (u.rt <= 0 || !u.path.length) { u.rt = .5; if (!route(u, e.x, e.y)) { u.path = []; } }
   moveAlong(u, dt);
 }
-const hazardOn = () => S.haz.on;
+const hazardOn = () => S.haz.on || S.haz.warned;   // head inside as soon as the warning sounds
 function shelter(u, dt) {   // go inside during a hazard
   if (isUnder(u.y) && cy(cellOf(u.x, u.y)) >= 2 && !u.path.length) return;
   if (!u.path.length || u.st !== 'shelter') { u.st = 'shelter'; const r = homeRoom(); const p = rndRoomPt(r); route(u, p.x, p.y); }
