@@ -6,7 +6,7 @@ const OUT_POP = 6, OUT_FOOD = 2, OUT_FOOD_T = 10;          // outpost: +6 ant sp
 const YHAZ = {   // hazard tuning (selected by the Surface hazards setting)
   easy: { foot: [80, 115], footGrow: 2.2, footR: 48, react: .8, notice: .7, glass: [140, 190], glassLife: 15, glassSpd: 28, glassDps: 5, glassR: 24,
     bug: [75, 105], bugMax: 2, bugHp: 1, first: 60 },
-  hard: { foot: [42, 62], footGrow: 1.7, footR: 62, react: 1.0, notice: .35, glass: [80, 110], glassLife: 24, glassSpd: 42, glassDps: 9, glassR: 30,
+  hard: { foot: [55, 80], footGrow: 2.0, footR: 58, react: .85, notice: .5, glass: [90, 120], glassLife: 22, glassSpd: 40, glassDps: 7, glassR: 30,
     bug: [45, 65], bugMax: 4, bugHp: 1.45, first: 35 },
 };
 const YDIF = {   // rival colonies (selected by game difficulty)
@@ -247,7 +247,7 @@ function hazardTick(dt) {
 function yardTick(dt) {
   const yh = Y(); if (!yh) return; const d = YDIF[S.diff] || YDIF.easy, H = YHAZ[yh.hzLevel];
   if (!yh.init) { yh.init = 1; yardInitRivals(); }
-  if (S.tut < 5 && S.t < 360) { for (const k in yh.nx) yh.nx[k] += dt; }
+  if (S.tut < 6 && S.t < 360) { for (const k in yh.nx) yh.nx[k] += dt; }
   const mine = yAnts();
   // scheduling
   if (H) {
@@ -257,6 +257,7 @@ function yardTick(dt) {
       if (nb < H.bugMax) { const ks = Object.keys(BUGS), k = ks[Math.floor(rnd() * ks.length)], ref = mine.length ? mine[Math.floor(rnd() * mine.length)] : HOME; let x, y;
         for (let t = 0; t < 20; t++) { const a = rnd() * 7, r = 320 + rnd() * 200; x = clamp(ref.x + Math.cos(a) * r, 60, YW - 60); y = clamp(ref.y + Math.sin(a) * r, 60, YH - 60); if (yd2({ x, y }, HOME) > 220) break; }
         spawnHazard(k, x, y); } } }
+  if (S.t >= yh.nx.raid && (S.raid.active || S.raid.next - S.t < 60)) yh.nx.raid = S.t + 60;   // don't stack with a nest raid
   if (S.t >= yh.nx.raid) { yh.nx.raid = S.t + d.raidEvery[0] + rnd() * (d.raidEvery[1] - d.raidEvery[0]); startRaid(); }
   hazardTick(dt);
   // rival colonies grow

@@ -106,7 +106,9 @@ with sync_playwright() as p:
     pg.evaluate("([x, y]) => { AH.cam.x = x; AH.cam.y = y; }", [(s["x"] + 1.5) * 24, (s["y"] + 1) * 24]); pg.wait_for_timeout(60)
     gp = pg.evaluate(W2S, [(s["x"] + 1.5) * 24, (s["y"] + 1) * 24 + 30 / 1.15]); tap(gp["x"], gp["y"]); pg.wait_for_timeout(150)
     check(len(pg.evaluate("() => AH.roomsOf('den')")) == 1, "Sleeping Den placed")
-    check(pg.evaluate("() => AH.S.tut") == 5 and "Got it" in pg.inner_text("#coach"), "tutorial reaches its last card")
+    check(pg.evaluate("() => AH.S.tut") == 5 and "Surface" in pg.inner_text("#coach"), "tutorial step 6 points to the Surface map")
+    pg.click("#vt-yard"); pg.wait_for_timeout(150); pg.click("#yb-harv"); pg.wait_for_timeout(150); pg.click("#vt-nest"); pg.wait_for_timeout(300)
+    check(pg.evaluate("() => AH.S.tut") == 6 and "Got it" in pg.inner_text("#coach"), "tutorial reaches its last card")
     pg.click("#coach-ok"); check(not pg.is_visible("#coach"), "tutorial closes")
     # cancel works
     pg.click("#tab-rooms"); pg.click("[data-room=pantry]"); pg.click("#mode-x"); check(pg.evaluate("() => AH.UI.mode") is None, "Cancel exits room placement")

@@ -26,7 +26,7 @@ function measureHud() { const t = document.getElementById('top'), b = document.g
   const land = W > H && H < 500, co = document.getElementById('coach'), fb = document.getElementById('fabs'), ts = document.getElementById('toasts'), sheet = document.getElementById('sheet');
   if (!co) return; const sheetOpen = sheet && !sheet.classList.contains('hidden');
   if (land) { co.style.top = ''; co.style.bottom = ''; fb.style.bottom = ''; ts.style.top = ''; const vt0 = document.getElementById('vtog'), mi0 = document.getElementById('mini'); if (vt0) vt0.style.bottom = ''; if (mi0) mi0.style.bottom = ''; return; }
-  if (sheetOpen) { co.style.bottom = 'auto'; co.style.top = (VIEW.top + 6) + 'px'; } else { co.style.top = 'auto'; co.style.bottom = (VIEW.bot + 8) + 'px'; }
+  if (sheetOpen) { co.style.bottom = 'auto'; co.style.top = (VIEW.top + 6) + 'px'; } else { const v1 = document.getElementById('vtog'), m1 = document.getElementById('mini'); const lift = Math.max(v1 ? v1.offsetHeight : 0, m1 && getComputedStyle(m1).display !== 'none' ? m1.offsetHeight : 0); co.style.top = 'auto'; co.style.bottom = (VIEW.bot + 18 + lift) + 'px'; }
   fb.style.bottom = (VIEW.bot + 10) + 'px'; const vt = document.getElementById('vtog'); if (vt) { vt.style.bottom = (VIEW.bot + 10) + 'px'; vt.style.opacity = sheetOpen ? '0' : ''; vt.style.pointerEvents = sheetOpen ? 'none' : ''; } const mi = document.getElementById('mini'); if (mi) mi.style.bottom = (VIEW.bot + 10) + 'px'; fb.style.opacity = sheetOpen ? '0' : ''; fb.style.pointerEvents = sheetOpen ? 'none' : '';
   ts.style.top = (VIEW.top + 8 + (sheetOpen && !co.classList.contains('hidden') ? co.offsetHeight + 6 : 0)) + 'px'; }
 

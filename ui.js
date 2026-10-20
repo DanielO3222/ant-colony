@@ -15,6 +15,7 @@ const TUT = [
   { t: 'Time to dig! Tap <b>⛏ Dig</b>, then drag your finger from the tunnel into the dirt. Each cell costs 1 🍯.', hi: 'tab-dig', ok: () => S.st.planned >= 4 },
   { t: 'Rooms go next to tunnels. Tap <b>🏠 Rooms → Food Storage</b>, then tap beside your tunnel.', hi: 'tab-rooms', ok: () => roomsOf('storage').length > 0 },
   { t: 'Add a <b>🛏️ Sleeping Den</b> so your colony can grow past 14 ants. Workers dig rooms out for you.', hi: 'tab-rooms', ok: () => roomsOf('den').length > 0 },
+  { t: 'There\'s a big yard outside! Tap <b>🗺️ Surface</b>, then <b>🌾 Send</b> and tap food. Tap <b>🕳️ Nest</b> to come back.', hi: 'vt-yard', ok: () => S.flags.yard },
   { t: 'You\'ve got it! Keep food above zero, follow <b>🎯 Goals</b>, and train soldiers before the first raid. Tap ✓.', hi: null, ok: () => false, done: true },
 ];
 function tutTick() {
@@ -95,7 +96,7 @@ function renderRooms(soft) {
 }
 function renderColony() {
   const el = $('sheet'); el.classList.remove('hidden'); const net = netPerMin();
-  const desc = { worker: 'Dig tunnels and build rooms', harvester: 'Bring food from the surface', cutter: 'Carry leaves to the Fungus Garden', soldier: 'Guard the nest, attack the enemy hill' };
+  const desc = { worker: 'Dig tunnels and build rooms · idle ones help gather food', harvester: 'Bring food from the surface', cutter: 'Carry leaves to the Fungus Garden', soldier: 'Guard the nest, attack the enemy hill' };
   const lay = canLay();
   const rows = ROLES.map(k => { const tr = TRAIN[k], v = k === 'worker' ? lay : canTrain(k);
     const plus = k === 'worker' ? `<button class="pm plus ${v.ok ? '' : 'off'}" data-a="lay:worker">＋<small>🥚${EGG_FOOD}🍯</small></button>` : `<button class="pm plus ${v.ok ? '' : 'off'}" data-a="+${k}">＋${tr ? `<small>${tr.food}🍯</small>` : ''}</button>`;
@@ -326,7 +327,7 @@ $('btn-goals').onclick = () => { UI.paused = true;
   overlay(`<h2>🎯 Goals</h2><ul class="goals">${GOALS.map(([id, n]) => `<li class="${S.goals[id] ? 'done' : ''}">${S.goals[id] ? '✅' : '⬜'} ${n}</li>`).join('')}</ul><p class="bdesc">Each goal gives +${GOAL_REWARD} 🍯. Destroy the enemy hill to win!</p><button class="big green" data-o="goalsclose">▶ Back to the colony</button>`); };
 function startGame(s, cont) {
   S = s; delete S.demo; UI.running = true; UI.paused = false; UI.sel = []; UI.speed = 1; $('btn-speed').textContent = '1×'; $('btn-speed').classList.remove('on'); $('btn-pause').textContent = '⏸';
-  inc = new Array(12).fill(0); parts.length = 0; events.length = 0; closeOverlay(); $('hud').classList.remove('hidden'); closeSheet(); setMode(null);
+  inc = new Array(12).fill(0); parts.length = 0; events.length = 0; $('toasts').innerHTML = ''; closeOverlay(); $('hud').classList.remove('hidden'); closeSheet(); setMode(null);
   let tutDone = false; try { tutDone = localStorage.getItem(TUT_KEY) === '1'; } catch (e) {} if (!cont && tutDone) S.tut = TUT.length;
   requestAnimationFrame(() => { measureHud(); cam.z = 1.15 * uiScale(); cam.x = ENTX + 50; cam.y = cont ? 60 : -30; clampCam(); });
   $('coach-t').dataset.k = ''; setView('nest', true); hud(); tutTick(); if (!cont) save();

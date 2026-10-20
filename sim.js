@@ -1,6 +1,6 @@
 'use strict';
 // ================= Ant Haven — simulation =================
-const VERSION = 'ah-v1.1.1';
+const VERSION = 'ah-v1.2.0';
 const CS = 24, COLS = 64, ROWS = 34, ENT = 32, SURF_H = 300, NC = COLS * ROWS;
 const WW = COLS * CS, WH = ROWS * CS, ENTX = (ENT + .5) * CS, ENTI = ENT;  // entrance cell (ENT,0)
 const SOIL = 0, DUG = 1, PLAN = 2, ROCK = 3;
@@ -39,8 +39,8 @@ const BIOMES = {
   bloom: { name: 'Wild Bloom', emoji: '🌸', soon: true, card: ['#d96ba8', '#ffd6ea'] },
 };
 const DIFF = {
-  easy: { name: 'Easy', food: 50, eat: 1 / 85, raidFirst: 420, raidEvery: 240, raidBase: 3, raidGrow: 1, hp: 1, hillHp: 320, guards: 3, starve: .22, rainMul: 1 },
-  hard: { name: 'Hard', food: 40, eat: 1 / 62, raidFirst: 300, raidEvery: 180, raidBase: 4, raidGrow: 2, hp: 1.25, hillHp: 520, guards: 5, starve: .4, rainMul: 1.4 },
+  easy: { name: 'Easy', food: 50, eat: 1 / 85, raidFirst: 420, raidEvery: 240, raidBase: 3, raidGrow: 1, hp: 1, hillHp: 320, guards: 3, starve: .07, rainMul: 1, qRegen: .3, qSafe: true },
+  hard: { name: 'Hard', food: 40, eat: 1 / 62, raidFirst: 300, raidEvery: 180, raidBase: 4, raidGrow: 2, hp: 1.25, hillHp: 520, guards: 5, starve: .16, rainMul: 1.4, qRegen: .08, qSafe: false },
 };
 const ROOMS = {
   home: { name: 'Royal Nook', icon: '🏡', w: 5, h: 2, cost: {}, desc: 'Your starting chamber', cap: 100, eggs: 2, pop: 14 },
@@ -298,7 +298,7 @@ function assign(k, dir) {   // dir +1: convert a worker into k; -1: convert a k 
     return { ok: true, u };
   } else { const u = pickConvert(k); if (!u) return { ok: false, why: `No ${UT[k].name.toLowerCase()}s` }; setRole(u, 'worker'); return { ok: true, u }; }
 }
-function setRole(u, k) { const f = u.hp / u.max; u.k = k; u.max = UT[k].hp; u.hp = Math.max(1, Math.round(u.max * f)); u.st = 'idle'; u.job = -1; u.carry = 0; u.mode = 'guard'; u.wait = 0; u.train = 0; }
+function setRole(u, k) { const f = u.hp / u.max; u.k = k; u.help = 0; u.max = UT[k].hp; u.hp = Math.max(1, Math.round(u.max * f)); u.st = 'idle'; u.job = -1; u.carry = 0; u.mode = 'guard'; u.wait = 0; u.train = 0; }
 function orderSoldiers(ids, x, y, attack) {
   let n = 0; for (const id of ids) { const u = uById(id); if (!u || u.k !== 'soldier' || u.yd) continue;
     if (attack) { u.mode = 'attack'; u.path = []; u.rt = 0; } else { u.mode = 'move'; const gx = x + (n % 4 - 1.5) * 9, gy = isUnder(y) ? y : -3 - (n % 3) * 3; u.tx = gx; u.ty = gy; if (!route(u, gx, gy)) { u.mode = 'guard'; continue; } }
@@ -308,7 +308,7 @@ function guardSoldiers(ids) { for (const id of ids) { const u = uById(id); if (u
 
 // ---------------- AI ----------------
 function enemyNear(u, r, filter) { let best = null, bd = r; for (const e of S.units) { if (e.tm === u.tm || e.hp <= 0 || !e.yd !== !u.yd) continue; if (filter && !filter(e)) continue; const d = dist(u, e); if (d < bd) { bd = d; best = e; } } return best; }
-function hit(u, e, dt) { e.hp -= UT[u.k].dps * dt; u.atk = .25; u.ang = Math.atan2(e.y - u.y, e.x - u.x); e.lastHit = u.id;
+function hit(u, e, dt) { if (e.k === 'raider') e.lastBy = u.id; e.hp -= UT[u.k].dps * (u.k === 'raider' && e.k !== 'soldier' && D().qSafe ? .4 : 1) * dt; u.atk = .25; u.ang = Math.atan2(e.y - u.y, e.x - u.x); e.lastHit = u.id;
   if (rnd() < dt * 4) parts.push({ x: (u.x + e.x) / 2, y: (u.y + e.y) / 2 - 3, vx: (rnd() - .5) * 40, vy: -20 - rnd() * 30, t: .4, c: '#fff6c8', r: 1.2 }); }
 function engage(u, e, dt) {
   if (dist(u, e) < 15) { hit(u, e, dt); return; }
@@ -338,7 +338,7 @@ function deliver(u, leaf) {
   u.carry = 0;
 }
 function thinkForager(u, dt, leaf) {
-  const e = enemyNear(u, 14); if (e) { hit(u, e, dt); return; }
+  const e = D().qSafe ? null : enemyNear(u, 14); if (e) { hit(u, e, dt); return; }
   if (u.wait > 0) { u.wait -= dt; return; }
   if (u.carry > 0) {
     if (u.st !== 'home') { const r = depot(leaf), p = rndRoomPt(r); u.st = 'home'; if (!route(u, p.x, p.y)) { deliver(u, leaf); u.st = 'idle'; } return; }
@@ -367,8 +367,13 @@ function findDig(u) {
       if (n >= 0 && S.grid[n] === PLAN && !claimSet.has(n) && wl[n] < .5) { plan = n; return true; } return false; });
   return g < 0 ? null : { stand: g, plan };
 }
+function canHelp(u) { const ws = units('worker'); return ws.length >= 2 && ws[0] !== u && S.res.food < foodCap() * .92 && !hazardOn(); }
 function thinkWorker(u, dt) {
-  const e = enemyNear(u, 14); if (e) { hit(u, e, dt); return; }
+  const e = D().qSafe ? null : enemyNear(u, 14); if (e) { hit(u, e, dt); return; }
+  if (u.help) {   // idle worker lending a hand with food; goes back to digging when there is work
+    if (!u.carry) { u.hl = (u.hl || 0) - dt; if (u.hl <= 0) { u.hl = 1; if (findDig(u) || !canHelp(u)) { u.help = 0; u.st = 'idle'; u.path = []; u.idle0 = 0; } } }
+    if (u.help) { thinkForager(u, dt, false); return; }
+  }
   if (u.wait > 0) { u.wait -= dt; return; }
   if (u.job >= 0) {
     if (S.grid[u.job] !== PLAN) { u.job = -1; u.st = 'idle'; return; }
@@ -384,7 +389,8 @@ function thinkWorker(u, dt) {
   if (u.st === 'wander') { if (moveAlong(u, dt)) { u.st = 'idle'; u.wait = 1 + rnd() * 2; } return; }
   u.look = (u.look || 0) - dt; if (u.look > 0) return; u.look = .4 + rnd() * .3;
   const j = findDig(u);
-  if (j) { u.job = j.plan; claimSet.add(j.plan); const p = pt(j.stand, 4), q = pt(j.plan, 0); p.x += (q.x - p.x) * .3; p.y += (q.y - p.y) * .3; u.st = route(u, p.x, p.y) ? 'walk' : 'idle'; if (u.st === 'idle') { claimSet.delete(u.job); u.job = -1; } return; }
+  if (j) { u.idle0 = 0; u.job = j.plan; claimSet.add(j.plan); const p = pt(j.stand, 4), q = pt(j.plan, 0); p.x += (q.x - p.x) * .3; p.y += (q.y - p.y) * .3; u.st = route(u, p.x, p.y) ? 'walk' : 'idle'; if (u.st === 'idle') { claimSet.delete(u.job); u.job = -1; } return; }
+  if (!u.idle0) u.idle0 = S.t; if (S.t - u.idle0 > 12 && canHelp(u)) { u.help = 1; u.idle0 = 0; u.st = 'idle'; u.path = []; return; }
   // idle: wander between rooms
   const rs = doneRooms(); const r = rs[Math.floor(rnd() * rs.length)]; const p = rndRoomPt(r); if (route(u, p.x, p.y)) u.st = 'wander'; u.wait = .5 + rnd() * 2;
 }
@@ -406,17 +412,17 @@ function thinkSoldier(u, dt) {
   if (u.path.length) moveAlong(u, dt);
 }
 function thinkQueen(u, dt) {
-  const e = enemyNear(u, 15); if (e) { hit(u, e, dt); return; }
+  const e = D().qSafe ? null : enemyNear(u, 15); if (e) { hit(u, e, dt); return; }
   if (u.path.length) { moveAlong(u, dt); return; }
   u.wait -= dt; if (u.wait <= 0) { u.wait = 4 + rnd() * 5; const r = S.rooms.find(r => r.k === 'queen' && r.done) || homeRoom(); const p = rndRoomPt(r); route(u, p.x, p.y); }
 }
 function raidTarget() {
   const st = S.rooms.filter(r => r.done && ROOMS[r.k].cap);
   if (S.res.food >= 1 && st.length) return rndRoomPt(st[Math.floor(rnd() * st.length)]);
-  const q = queen(); return q ? { x: q.x, y: q.y } : rndRoomPt(homeRoom());
+  const q = queen(); return q && !D().qSafe ? { x: q.x, y: q.y } : rndRoomPt(st.length ? st[0] : homeRoom());
 }
 function thinkRaider(u, dt) {
-  const e = enemyNear(u, 15); if (e) { hit(u, e, dt); return; }
+  const e = enemyNear(u, 15, D().qSafe ? (x => x.k === 'soldier' || x.id === u.lastBy) : null); if (e) { hit(u, e, dt); return; }
   if (u.st === 'in') {
     const s = enemyNear(u, 70, e => e.k === 'soldier'); if (s) { engage(u, s, dt); return; }
     u.rt -= dt; if (!u.path.length && u.rt <= 0) { const p = raidTarget(); route(u, p.x, p.y); u.rt = 1.5; u.arr = 0; }
@@ -455,6 +461,7 @@ function eventsTick(dt) {
   // raids
   const lead = has('lookout') ? 45 : 12;
   if (!W.active && !W.warned && S.t > W.next - lead) { W.warned = true; say(has('lookout') ? '🔭 Lookout: enemy raid in 45s!' : '⚔️ You hear marching… a raid is coming!', 'warn'); }
+  if (!W.active && S.t >= W.next && !H.on && S.yard && S.yard.foes.some(f => f.raid)) W.next = S.t + 45;   // don't stack with a Surface raid
   if (!W.active && S.t >= W.next && !H.on) {
     W.active = true; W.lost = 0; W.kills = 0; const n = dif.raidBase + Math.floor(W.n * dif.raidGrow) + (S.endless ? 2 : 0);
     const hx = !S.hill.dead ? S.hill.x : (W.n % 2 ? CS * 1.5 : WW - CS * 1.5);
@@ -477,7 +484,8 @@ function colonyTick(dt) {
   const dif = D(); const q = queen();
   // eating
   const e = upkeep() * dt; if (S.res.food >= e) { S.res.food -= e; S.st.eaten += e; } else { S.st.eaten += S.res.food; S.res.food = 0; }
-  if (S.res.food <= 0) { for (const u of S.units) if (u.tm === 0) u.hp -= dif.starve * (u.k === 'queen' ? .35 : 1) * dt; if (!S.flags.starveSaid || S.t - S.flags.starveSaid > 20) { S.flags.starveSaid = S.t; say('🍯 Out of food! Ants are starving — send harvesters!', 'bad'); } }
+  if (S.res.food <= 0) { for (const u of S.units) if (u.tm === 0 && !(u.k === 'harvester' || u.help || u.yd)) u.hp -= dif.starve * (u.k === 'queen' ? .35 : 1) * dt; if (!S.flags.starveSaid || S.t - S.flags.starveSaid > 20) { S.flags.starveSaid = S.t; say('🍯 Out of food! Ants are starving — send harvesters!', 'bad'); } }
+  if (q && q.hp > 0 && S.res.food > 0 && q.hp < q.max) q.hp = Math.min(q.max, q.hp + (dif.qRegen || 0) * dt);
   // queen lays eggs
   if (q) { const qr = S.rooms.find(r => r.k === 'queen' && r.done && !r.fl);
     S.qT -= dt * (qr ? 2 : 1) * ((S.haz.on && B().hazard.kind === 'cold') ? .6 : 1);
@@ -525,7 +533,7 @@ function goalsTick() { for (const [id, name, f] of GOALS) if (!S.goals[id] && f(
 function step(dt) {
   if (!S || S.over) return;
   S.t += dt;
-  if (S.tut < 5 && S.t < 360) { S.rain.next += dt; S.raid.next += dt; S.haz.next += dt; }   // calm while learning
+  if (S.tut < 6 && S.t < 360) { S.rain.next += dt; S.raid.next += dt; S.haz.next += dt; }   // calm while learning
   eventsTick(dt);
   S.wT = (S.wT || 0) - dt;
   if (S.water > 0) { const sumps = S.rooms.filter(r => r.k === 'sump' && r.done && roomCells(r).some(i => wl[i] > .05)).length; S.water = Math.max(0, S.water - (.05 + .0025 * dugCount + .4 * sumps) * dt); }
