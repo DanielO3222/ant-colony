@@ -97,3 +97,8 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;touch-action:manipulat
   #toasts{top:calc(var(--st) + 110px)}
   #overlay.title{align-items:center;background:#0007}#ov-card{max-width:600px}.logo h1{font-size:32px}
 }
+
+.brood{background:#f6e3bb;border:2px solid #e2c48a;border-radius:12px;padding:7px 8px;margin-top:4px;font-size:12.5px;display:flex;flex-direction:column;gap:5px}
+.brood.blocked{border-color:#e07a5a;background:#fbe0d0}.brood .bw{font-size:13px}.brood.blocked .bw{color:#a5281c}
+.brood .bb{display:flex;gap:6px;flex-wrap:wrap}.brood .bb .sm{height:42px;font-size:14px}.sm.off{filter:grayscale(.8);opacity:.6}
+.brood .bh2{display:flex;align-items:center;gap:4px}.seg{height:36px;padding:0 9px;border-radius:10px;background:#e8d3a8;border:2px solid #c9a36e;font-size:13px}.seg.on{background:linear-gradient(#ffe7a8,#f2c15a);border-color:#a5743f}

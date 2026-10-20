@@ -12,7 +12,7 @@ BOT = """(FIND) => { const A = AH, S = A.S, find = eval(FIND), log = [];
   const ad = A.adults(), h = A.count('harvester');
   const wantH = Math.max(3, Math.round(ad * .34)); if ((h < wantH || S.res.food < 20) && A.count('worker') > 2) { const r = A.assign('harvester', 1); if (r.ok) log.push('+harv'); }
   if (S.res.food > 70 && h > 3 && A.count('worker') < 2) A.assign('harvester', -1);
-  const plan = [['eggs', 6], ['den', 8], ['queen', 9], ['barracks', 4], ['garden', 8], ['nursery', 7], ['lookout', 2], ['den', 10], ['sump', 30], ['eggs', 9], ['storage', 6], ['den', 11], ['pantry', 7]];
+  const plan = [['den', 8], ['queen', 9], ['barracks', 4], ['garden', 8], ['nursery', 7], ['lookout', 2], ['den', 10], ['sump', 30], ['eggs', 9], ['storage', 6], ['den', 11], ['pantry', 7]];
   for (const [k, py] of plan) { const n = plan.filter(p => p[0] === k).indexOf(plan.find(p => p[0] === k && p[1] === py)); if (A.roomsOf(k).length > n) continue;
     const c = A.ROOMS[k].cost; if ((c.food || 0) + 12 > S.res.food || (c.leaves || 0) > S.res.leaves) break;
     let s = find(k, k === 'sump' ? 30 : py); if (!s && k === 'sump') { // dig a deep shaft first
@@ -102,15 +102,39 @@ with sync_playwright() as p:
     touch("touchStart", [(gp["x"], gp["y"])]); touch("touchMove", [(gp["x"] + 1, gp["y"])]); pg.wait_for_timeout(120); pg.screenshot(path=SS + "06-room-ghost.png"); gh = pg.evaluate("() => [AH.UI.ghost, AH.UI.room, AH.UI.ghost && AH.canRoom(AH.UI.room, AH.UI.ghost.x, AH.UI.ghost.y)]"); touch("touchEnd", []); pg.wait_for_timeout(200)
     print("ghost", pg.evaluate("() => [pointers.size, gest && gest.kind, (e => e && (e.id || e.className || e.tagName) + '<' + (e.parentElement && (e.parentElement.id || e.parentElement.className)))(document.elementFromPoint(%f, %f)), %f, %f]" % (gp["x"], gp["y"], gp["x"], gp["y"])), s, gh, pg.inner_text("#toasts"))
     check(len(pg.evaluate("() => AH.roomsOf('storage')")) == 1 and pg.evaluate("() => AH.UI.mode") is None, "Food Storage placed by tap, placement mode ends by itself")
-    pg.click("#tab-rooms"); pg.click("[data-room=eggs]"); s = pg.evaluate(FIND_ROOM.replace("(k, prefY)", "([k, prefY])"), ["eggs", 5])
+    pg.click("#tab-rooms"); pg.click("[data-room=den]"); s = pg.evaluate(FIND_ROOM.replace("(k, prefY)", "([k, prefY])"), ["den", 5])
     pg.evaluate("([x, y]) => { AH.cam.x = x; AH.cam.y = y; }", [(s["x"] + 1.5) * 24, (s["y"] + 1) * 24]); pg.wait_for_timeout(60)
     gp = pg.evaluate(W2S, [(s["x"] + 1.5) * 24, (s["y"] + 1) * 24 + 30 / 1.15]); tap(gp["x"], gp["y"]); pg.wait_for_timeout(150)
-    check(len(pg.evaluate("() => AH.roomsOf('eggs')")) == 1, "Egg Room placed")
+    check(len(pg.evaluate("() => AH.roomsOf('den')")) == 1, "Sleeping Den placed")
     check(pg.evaluate("() => AH.S.tut") == 5 and "Got it" in pg.inner_text("#coach"), "tutorial reaches its last card")
     pg.click("#coach-ok"); check(not pg.is_visible("#coach"), "tutorial closes")
     # cancel works
-    pg.click("#tab-rooms"); pg.click("[data-room=den]"); pg.click("#mode-x"); check(pg.evaluate("() => AH.UI.mode") is None, "Cancel exits room placement")
+    pg.click("#tab-rooms"); pg.click("[data-room=pantry]"); pg.click("#mode-x"); check(pg.evaluate("() => AH.UI.mode") is None, "Cancel exits room placement")
 
+    # --- hatching is ALWAYS possible (the playtest bug) ---
+    hb = pg.evaluate("""() => { const S = AH.S, out = {}; S.res.food = 60;
+      out.start = AH.canLay();
+      // fill the colony to the cap: lay is blocked with a Den fix, never silently
+      while (AH.canLay().ok) AH.layEgg(); out.full = AH.canLay();
+      return out; }""")
+    check(hb["start"]["ok"], f"queen can lay at the start (starter Egg Room) {hb['start']}")
+    check(not hb["full"]["ok"] and hb["full"].get("fix") in ("den", "eggs"), f"when blocked, the reason comes with a one-tap fix {hb['full']}")
+    pg.click("#tab-colony"); pg.wait_for_timeout(150)
+    check(pg.locator("[data-a=lay]").count() == 1 and pg.locator("[data-a^='fix:']").count() == 1 and pg.locator("[data-a='lay:worker']").count() == 1, "Colony panel shows Lay egg, the fix button and a Worker ＋")
+    check("⛔" in pg.inner_text(".brood"), "blocked reason shown in the brood card: " + pg.inner_text(".brood .bw"))
+    pg.screenshot(path=SS + "03b-brood-blocked.png")
+    pg.evaluate("() => { const S = AH.S; S.eggs.length = 0; S.res.food = 60; }"); pg.wait_for_timeout(300)
+    pg.click("[data-a='as:harvester']"); n0 = pg.evaluate("() => AH.S.eggs.length"); pg.click("[data-a=lay]"); pg.wait_for_timeout(100)
+    e = pg.evaluate("() => AH.S.eggs.map(e => e.as)")
+    check(len(e) == n0 + 1 and e[-1] == "harvester", f"Lay egg now works and respects 'hatch as harvester' {e}")
+    h0 = pg.evaluate("() => AH.count('harvester')"); run(45)
+    check(pg.evaluate("() => AH.count('harvester')") > h0, "the harvester egg hatched into a harvester (no worker converted)")
+    # with only one worker, Harvester ＋ lays a harvester egg instead of refusing
+    pg.evaluate("() => { const S = AH.S; S.units.filter(u => u.k === 'worker').slice(1).forEach(u => u.k = 'harvester'); S.res.food = 60; S.eggs.length = 0; }"); pg.wait_for_timeout(300)
+    pg.click("[data-a='+harvester']"); pg.wait_for_timeout(100)
+    check(pg.evaluate("() => AH.S.eggs.length") == 1 and "harvester egg" in pg.inner_text("#toasts"), "with 1 worker left, ＋Harvester lays a harvester egg instead of failing")
+    pg.click("[data-a='lay:worker']"); check(pg.evaluate("() => AH.S.eggs.slice(-1)[0].as") == "worker", "Worker ＋ lays a worker egg")
+    pg.evaluate("() => { const S = AH.S; S.hatchAs = 'worker'; S.units.filter(u => u.k === 'harvester').slice(3).forEach(u => u.k = 'worker'); }"); pg.click("[data-a=close]")
     # --- 10 minutes of play following the tutorial strategy ---
     minfood, starved, lowseen, log = 999, 0, False, []
     shots = {}

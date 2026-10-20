@@ -1,6 +1,6 @@
 'use strict';
 // ================= Ant Haven — simulation =================
-const VERSION = 'ah-v1.0.0';
+const VERSION = 'ah-v1.0.1';
 const CS = 24, COLS = 64, ROWS = 34, ENT = 32, SURF_H = 300, NC = COLS * ROWS;
 const WW = COLS * CS, WH = ROWS * CS, ENTX = (ENT + .5) * CS, ENTI = ENT;  // entrance cell (ENT,0)
 const SOIL = 0, DUG = 1, PLAN = 2, ROCK = 3;
@@ -43,7 +43,7 @@ const DIFF = {
   hard: { name: 'Hard', food: 40, eat: 1 / 62, raidFirst: 300, raidEvery: 180, raidBase: 4, raidGrow: 2, hp: 1.25, hillHp: 520, guards: 5, starve: .4, rainMul: 1.4 },
 };
 const ROOMS = {
-  home: { name: 'Royal Nook', icon: '🏡', w: 5, h: 2, cost: {}, desc: 'Your starting chamber', cap: 100, eggs: 2, pop: 10 },
+  home: { name: 'Royal Nook', icon: '🏡', w: 5, h: 2, cost: {}, desc: 'Your starting chamber', cap: 100, eggs: 2, pop: 14 },
   storage: { name: 'Food Storage', icon: '🍯', w: 3, h: 2, cost: { food: 10 }, desc: '+60 food capacity', cap: 60 },
   eggs: { name: 'Egg Room', icon: '🥚', w: 3, h: 2, cost: { food: 12 }, desc: 'Room for 6 more eggs', eggs: 6 },
   den: { name: 'Sleeping Den', icon: '🛏️', w: 3, h: 2, cost: { food: 14 }, desc: '+8 ant capacity', pop: 8 },
@@ -85,7 +85,7 @@ function newState(bk, dk, seed) {
     rain: { on: false, t: 0, next: 230, n: 0, warned: false }, haz: { on: false, t: 0, next: bio.hazard ? 330 : 1e12, n: 0, warned: false },
     raid: { n: 0, next: dif.raidFirst, active: false, warned: false, lost: 0, kills: 0 },
     hill: { x: (COLS - 4.5) * CS, hp: dif.hillHp, max: dif.hillHp, dead: false, spawnT: 0 },
-    forage: null, leafT: null, qT: 8, goals: {}, flags: {}, tut: 0, endless: false, won: false, over: false, why: '',
+    forage: null, leafT: null, qT: 8, hatchAs: 'worker', goals: {}, flags: {}, tut: 0, endless: false, won: false, over: false, why: '',
     st: { gathered: 0, eaten: 0, hatched: 0, lost: 0, leaves: 0, kills: 0, raids: 0, dug: 0, planned: 0, rooms: 0, stolen: 0, peak: 0, floods: 0 } };
   const g = s.grid;
   // bedrock border
@@ -100,6 +100,8 @@ function newState(bk, dk, seed) {
   for (let y = 0; y <= 4; y++) g[idx(ENT, y)] = DUG;
   s.rooms.push({ id: s.nid++, k: 'home', x: ENT - 2, y: 5, w: 5, h: 2, done: true });
   for (let y = 5; y <= 6; y++) for (let x = ENT - 2; x <= ENT + 2; x++) { g[idx(x, y)] = DUG; s.room[idx(x, y)] = s.rooms[0].id; }
+  const er = { id: s.nid++, k: 'eggs', x: ENT + 3, y: 5, w: 3, h: 2, done: true }; s.rooms.push(er);   // starter Egg Room so hatching never stalls early
+  for (let y = 5; y <= 6; y++) for (let x = ENT + 3; x <= ENT + 5; x++) { g[idx(x, y)] = DUG; s.room[idx(x, y)] = er.id; }
   for (let x = ENT - 7; x <= ENT + 7; x++) s.fog[x] = 1;
   // surface food + plants
   const it = (k, sub, col, amt) => s.items.push({ id: s.nid++, k, sub, x: (col + .5) * CS, amt, max: amt, rg: 0 });
@@ -265,6 +267,15 @@ function computeWater() {
   for (const y of ys) { const a = rows.get(y); if (v >= a.length) { for (const i of a) wl[i] = 1; v -= a.length; } else { for (const i of a) wl[i] = v / a.length; v = 0; break; } }
 }
 // ---------------- colony management ----------------
+function eggRoomWithSpace() { return S.rooms.filter(r => r.done && ROOMS[r.k].eggs && !r.fl).find(r => S.eggs.filter(e => e.rid === r.id).length < ROOMS[r.k].eggs); }
+function canLay() {   // why the queen can / can't lay right now, plus a one-tap fix
+  if (!queen()) return { ok: false, why: 'No queen' };
+  if (adults() + S.eggs.length >= popCap()) return { ok: false, why: `Colony full (${popCap()} ants) — build a 🛏️ Sleeping Den`, fix: 'den' };
+  if (!eggRoomWithSpace()) return { ok: false, why: S.rooms.some(r => r.k === 'eggs' && r.done && r.fl) ? 'Egg Room is flooded — wait or build another' : 'Egg rooms are full — build another 🥚 Egg Room', fix: 'eggs' };
+  if (S.res.food < EGG_FOOD) return { ok: false, poor: true, why: `Need ${EGG_FOOD} food for an egg`, fix: 'harvester' };
+  return { ok: true };
+}
+function layEgg(as) { const v = canLay(); if (!v.ok) return v; S.res.food -= EGG_FOOD; S.eggs.push({ rid: eggRoomWithSpace().id, t: 0, wet: 0, ox: rnd(), oy: rnd(), as: as || S.hatchAs || 'worker' }); return { ok: true }; }
 function pickConvert(k) {  // choose an ant of role k to convert (prefer idle, not carrying)
   const c = S.units.filter(u => u.k === k && !u.train); if (!c.length) return null;
   c.sort((a, b) => (a.carry ? 1 : 0) - (b.carry ? 1 : 0) || (a.job >= 0 ? 1 : 0) - (b.job >= 0 ? 1 : 0)); return c[0];
@@ -279,8 +290,8 @@ function assign(k, dir) {   // dir +1: convert a worker into k; -1: convert a k 
   if (k === 'worker') return { ok: false };
   if (dir > 0) {
     const v = canTrain(k); if (!v.ok) return v;
-    if (count('worker') <= 1) return { ok: false, why: 'Keep at least 1 worker to dig — hatch more ants' };
-    const u = pickConvert('worker'); if (!u) return { ok: false, why: 'No free workers — hatch more ants' };
+    if (count('worker') <= 1) return { ok: false, needWorker: true, why: 'Need a spare worker (1 must stay to dig) — tap 🥚 Lay egg' };
+    const u = pickConvert('worker'); if (!u) return { ok: false, needWorker: true, why: 'No spare workers — tap 🥚 Lay egg' };
     setRole(u, k);
     if (TRAIN[k]) { S.res.food -= TRAIN[k].food; u.train = TRAIN[k].time; const b = roomsOf('barracks').find(r => r.done); if (b) { const p = rndRoomPt(b); route(u, p.x, p.y); } S.flags[k] = true; }
     return { ok: true, u };
@@ -470,16 +481,14 @@ function colonyTick(dt) {
   if (q) { const qr = S.rooms.find(r => r.k === 'queen' && r.done && !r.fl);
     S.qT -= dt * (qr ? 2 : 1) * ((S.haz.on && B().hazard.kind === 'cold') ? .6 : 1);
     if (S.qT <= 0) { S.qT = 16;
-      const room = S.rooms.filter(r => r.done && ROOMS[r.k].eggs && !r.fl).find(r => S.eggs.filter(e => e.rid === r.id).length < ROOMS[r.k].eggs);
-      if (room && adults() + S.eggs.length < popCap() && S.res.food >= EGG_FOOD + 6) { S.res.food -= EGG_FOOD; S.eggs.push({ rid: room.id, t: 0, wet: 0, ox: rnd(), oy: rnd() }); }
-      else S.qT = 3; } }
+      if (S.res.food >= EGG_FOOD + 6 && canLay().ok) layEgg(); else S.qT = 3; } }
   // eggs hatch
   const nurse = S.rooms.some(r => r.k === 'nursery' && r.done && !r.fl), cold = S.haz.on && B().hazard && B().hazard.kind === 'cold';
   const need = nurse ? 24 : 40;
   for (let k = S.eggs.length - 1; k >= 0; k--) { const g = S.eggs[k], r = roomById(g.rid) || homeRoom();
     if (r.fl) { g.wet += dt; if (g.wet > 6) { S.eggs.splice(k, 1); say('🥚 Eggs drowned in a flooded room!', 'bad'); continue; } } else g.wet = Math.max(0, g.wet - dt);
     g.t += dt * (cold && !nurse ? .5 : 1);
-    if (g.t >= need) { S.eggs.splice(k, 1); const p = rndRoomPt(r); const u = addU('worker', p.x, p.y); u.wait = 1; S.st.hatched++; events.push({ hatch: u.id }); } }
+    if (g.t >= need) { S.eggs.splice(k, 1); const p = rndRoomPt(r); const u = addU(g.as === 'harvester' ? 'harvester' : 'worker', p.x, p.y); u.wait = 1; S.st.hatched++; events.push({ hatch: u.id }); } }
   // gardens: leaves -> food
   for (const r of S.rooms) if (r.k === 'garden' && r.done && !r.fl) { r.gt = (r.gt || 0) + dt; if (r.gt >= 5) { r.gt = 0; if (S.res.leaves >= 1 && S.res.food < foodCap()) { S.res.leaves -= 1; const before = S.res.food; S.res.food = Math.min(foodCap(), S.res.food + 3); S.st.gathered += S.res.food - before; incomeAdd(S.res.food - before); r.grow = Math.min(1, (r.grow || 0) + .08); } } }
   // flooded storage spoils food
@@ -495,7 +504,7 @@ const GOALS = [
   ['food20', 'Collect 20 food', () => S.st.gathered >= 20],
   ['dig', 'Dig a tunnel (5 cells)', () => S.st.dug >= 5],
   ['storage', 'Build a Food Storage', () => has('storage') || has('pantry')],
-  ['eggs', 'Build an Egg Room', () => has('eggs')],
+  ['den', 'Build a Sleeping Den', () => has('den')],
   ['hatch5', 'Hatch 5 ants', () => S.st.hatched >= 5],
   ['queen', 'Build the Queen Chamber', () => has('queen')],
   ['barracks', 'Build a Barracks', () => has('barracks')],

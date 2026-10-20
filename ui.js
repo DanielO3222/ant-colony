@@ -14,7 +14,7 @@ const TUT = [
   { t: 'More harvesters = more food. Open <b>🐜 Colony</b> and tap <b>＋</b> next to Harvesters.', hi: 'tab-colony', ok: () => count('harvester') >= 3 },
   { t: 'Time to dig! Tap <b>⛏ Dig</b>, then drag your finger from the tunnel into the dirt. Each cell costs 1 🍯.', hi: 'tab-dig', ok: () => S.st.planned >= 4 },
   { t: 'Rooms go next to tunnels. Tap <b>🏠 Rooms → Food Storage</b>, then tap beside your tunnel.', hi: 'tab-rooms', ok: () => roomsOf('storage').length > 0 },
-  { t: 'Add an <b>🥚 Egg Room</b> so the queen can lay more eggs. Workers dig rooms out for you.', hi: 'tab-rooms', ok: () => roomsOf('eggs').length > 0 },
+  { t: 'Add a <b>🛏️ Sleeping Den</b> so your colony can grow past 14 ants. Workers dig rooms out for you.', hi: 'tab-rooms', ok: () => roomsOf('den').length > 0 },
   { t: 'You\'ve got it! Keep food above zero, follow <b>🎯 Goals</b>, and train soldiers before the first raid. Tap ✓.', hi: null, ok: () => false, done: true },
 ];
 function tutTick() {
@@ -25,7 +25,7 @@ function tutTick() {
   if ($('coach-t').dataset.k !== String(S.tut)) { $('coach-t').innerHTML = `<span class="step">${S.tut + 1}/${TUT.length}</span> ` + st.t; $('coach-t').dataset.k = S.tut; $('coach-ok').classList.toggle('hidden', !st.done); }
   hiOff(); if (st.hi && UI.tab !== st.hi.slice(4)) $(st.hi).classList.add('hl');
   if (S.tut === 1 && UI.tab === 'colony') document.querySelector('[data-a="+harvester"]')?.classList.add('hl');
-  if (S.tut >= 3 && S.tut <= 4 && UI.tab === 'rooms') document.querySelector(`[data-room="${S.tut === 3 ? 'storage' : 'eggs'}"]`)?.classList.add('hl');
+  if (S.tut >= 3 && S.tut <= 4 && UI.tab === 'rooms') document.querySelector(`[data-room="${S.tut === 3 ? 'storage' : 'den'}"]`)?.classList.add('hl');
 }
 function hiOff() { document.querySelectorAll('.hl').forEach(e => e.classList.remove('hl')); }
 function endTut() { S.tut = TUT.length; try { localStorage.setItem(TUT_KEY, '1'); } catch (e) {} tutTick(); }
@@ -33,12 +33,13 @@ $('coach-x').onclick = endTut; $('coach-ok').onclick = endTut;
 
 // ---------- HUD ----------
 function layReason() {
-  const q = queen(); if (!q) return 'No queen';
-  if (adults() + S.eggs.length >= popCap()) return 'Colony full — build a 🛏️ Sleeping Den';
-  if (!S.rooms.some(r => r.done && ROOMS[r.k].eggs && !r.fl && S.eggs.filter(e => e.rid === r.id).length < ROOMS[r.k].eggs)) return 'No space for eggs — build a 🥚 Egg Room';
-  if (S.res.food < EGG_FOOD + 6) return 'Needs 10+ food to lay';
+  const v = canLay(); if (!v.ok) return v.why;
+  if (S.res.food < EGG_FOOD + 6) return 'Saving food — lays on her own at 10+ food';
   return `Laying (next egg ${Math.ceil(Math.max(0, S.qT) / (has('queen') ? 2 : 1))}s)`;
 }
+const FIX_TXT = { den: '🛏️ Build Den', eggs: '🥚 Build Egg Room', harvester: '🌾 ＋ Harvester' };
+function doFix(f) { if (f === 'harvester') { const r = assign('harvester', 1); toast(r.ok ? '🌾 +1 Harvester' : r.why, r.ok ? '' : 'bad'); return; }
+  closeSheet(); UI.tab = 'rooms'; setMode('room', f); flyTo(ENTX, 160); }
 function alertText() {
   const f = S.res.food, net = netPerMin(), R = S.raid, bio = B();
   if (f <= 0) return { k: 'bad', t: '🍯 Starving! Ants lose health until you get food.', btn: true };
@@ -50,6 +51,7 @@ function alertText() {
   if (S.rain.on) return { k: 'warn', t: `${bio.rain.icon} ${bio.rain.name}! Water pools in the deepest tunnels` };
   if (S.rain.warned) return { k: 'warn', t: `${bio.rain.icon} ${bio.rain.name} in ${mmss(S.rain.next - S.t)} — keep key rooms high` };
   if (S.water > .5) return { k: 'info', t: `💧 Draining flood water… (${S.water.toFixed(1)} cells)` };
+  const v = canLay(); if (!v.ok && v.fix && v.fix !== 'harvester' && S.t > 20) return { k: 'info', t: `👑 Queen can't lay: ${v.why.split(' — ')[0]}`, fix: v.fix };
   return null;
 }
 let hudT = 0;
@@ -64,13 +66,13 @@ function hud() {
   const done = GOALS.filter(g => S.goals[g[0]]).length; $('btn-goals').textContent = `🎯 ${done}/${GOALS.length}`;
   const R = S.raid; $('status').textContent = S.hill.dead && !S.endless ? '🏳️ Hill conquered' : R.active ? '⚔️ Raid!' : S.t > R.next - (has('lookout') ? 45 : 12) || has('lookout') ? `⚔️ Raid ${mmss(R.next - S.t)}` : `☀️ Day ${1 + Math.floor(S.t / 120)} · ${mmss(S.t)}`;
   const a = alertText(), al = $('alert');
-  if (a) { al.className = 'show ' + a.k; $('alert-t').textContent = a.t; $('alert-b').classList.toggle('hidden', !a.btn); } else al.className = '';
+  if (a) { al.className = 'show ' + a.k; $('alert-t').textContent = a.t; const fx = a.btn ? 'harvester' : a.fix; $('alert-b').classList.toggle('hidden', !fx); $('alert-b').dataset.fix = fx || ''; $('alert-b').textContent = FIX_TXT[fx] || ''; } else al.className = '';
   const ns = count('soldier'); $('btn-army').classList.toggle('hidden', ns === 0); $('army-n').textContent = ns; $('btn-army').classList.toggle('sel', UI.sel.length > 0);
   $('btn-view').textContent = cam.y > 60 ? '⬆ Surface' : '⬇ Nest';
   if (UI.tab === 'colony' && !UI.selRoom) renderColony(); else if (UI.selRoom) renderRoomInfo(); else if (UI.tab === 'rooms' && UI.mode !== 'room' && !$('sheet').classList.contains('hidden')) renderRooms(true);
   updateMode();
 }
-$('alert-b').onclick = () => { const r = assign('harvester', 1); toast(r.ok ? '🌾 +1 Harvester' : r.why, r.ok ? '' : 'bad'); hud(); };
+$('alert-b').onclick = () => { doFix($('alert-b').dataset.fix || 'harvester'); hud(); };
 
 // ---------- sheets ----------
 function openTab(k) {
@@ -94,15 +96,19 @@ function renderRooms(soft) {
 function renderColony() {
   const el = $('sheet'); el.classList.remove('hidden'); const net = netPerMin();
   const desc = { worker: 'Dig tunnels and build rooms', harvester: 'Bring food from the surface', cutter: 'Carry leaves to the Fungus Garden', soldier: 'Guard the nest, attack the enemy hill' };
-  const rows = ROLES.map(k => { const tr = TRAIN[k], v = k === 'worker' ? { ok: false } : canTrain(k);
-    const plus = k === 'worker' ? '' : `<button class="pm plus ${v.ok ? '' : 'off'}" data-a="+${k}">＋${tr ? `<small>${tr.food}🍯</small>` : ''}</button>`;
+  const lay = canLay();
+  const rows = ROLES.map(k => { const tr = TRAIN[k], v = k === 'worker' ? lay : canTrain(k);
+    const plus = k === 'worker' ? `<button class="pm plus ${v.ok ? '' : 'off'}" data-a="lay:worker">＋<small>🥚${EGG_FOOD}🍯</small></button>` : `<button class="pm plus ${v.ok ? '' : 'off'}" data-a="+${k}">＋${tr ? `<small>${tr.food}🍯</small>` : ''}</button>`;
     const minus = k === 'worker' ? '' : `<button class="pm" data-a="-${k}">−</button>`;
-    return `<div class="role"><i>${UT[k].icon}</i><div class="rn"><b>${UT[k].name}s <span class="cnt">${count(k)}</span></b><small>${!v.ok && v.why && k !== 'worker' && k !== 'harvester' ? '🔒 ' + v.why : desc[k]}</small></div>${minus}${plus}</div>`; }).join('');
+    return `<div class="role"><i>${UT[k].icon}</i><div class="rn"><b>${UT[k].name}s <span class="cnt">${count(k)}</span></b><small>${!v.ok && v.why && k !== 'worker' && k !== 'harvester' ? '🔒 ' + v.why : k === 'worker' ? 'Dig tunnels and build rooms · ＋ lays a worker egg' : desc[k]}</small></div>${minus}${plus}</div>`; }).join('');
   const q = queen();
   const html = `<div class="sh-h"><b>🐜 Colony</b><span>${adults()}/${popCap()} ants · ${S.eggs.length} eggs</span><button class="x" data-a="close">✕</button></div>
-    <div class="qrow">👑 <b>Queen</b> ${q ? `❤️ ${Math.ceil(q.hp)}/${q.max}` : '—'} · <span>${layReason()}</span></div>
+    <div class="brood ${lay.ok ? '' : 'blocked'}"><div class="bh">👑 <b>Queen</b> ${q ? `❤️ ${Math.ceil(q.hp)}/${q.max}` : '—'} · 🥚 ${S.eggs.length}/${eggCap()} eggs${S.eggs.length ? ` · next hatch ${Math.ceil(Math.max(0, (has('nursery') ? 24 : 40) - Math.max(...S.eggs.map(e => e.t))))}s` : ''}</div>
+      <div class="bw">${lay.ok ? '✅ ' + layReason() : '⛔ ' + lay.why}</div>
+      <div class="bb"><button class="sm ${lay.ok ? 'green' : 'off'}" data-a="lay">🥚 Lay egg now · ${EGG_FOOD}🍯</button>${!lay.ok && lay.fix ? `<button class="sm green" data-a="fix:${lay.fix}">${FIX_TXT[lay.fix]}</button>` : ''}</div>
+      <div class="bh2">New ants hatch as: <button class="seg ${S.hatchAs === 'worker' ? 'on' : ''}" data-a="as:worker">⛏ Worker</button><button class="seg ${S.hatchAs === 'harvester' ? 'on' : ''}" data-a="as:harvester">🌾 Harvester</button></div></div>
     <div class="qrow">🍯 Food: <b class="${net < 0 ? 'neg' : 'pos'}">${net >= 0 ? '+' : ''}${Math.round(net)}/min</b> <small>(gathering ${Math.round(incomePerMin())}, eating ${Math.round(upkeep() * 60)})</small></div>
-    ${rows}<p class="tip">＋ turns a worker into that role. New ants hatch as workers.</p>`;
+    ${rows}<p class="tip">Worker ＋ lays an egg. Other ＋ buttons turn a spare worker into that role.</p>`;
   if (el.dataset.h === html) return; el.dataset.h = html; el.innerHTML = html;
 }
 function renderRoomInfo() {
@@ -120,7 +126,10 @@ $('sheet').addEventListener('click', e => {
     closeSheet(); UI.tab = 'rooms'; setMode('room', k); if (cam.y < 30) flyTo(cam.x, 140); return; }
   const a = b.dataset.a;
   if (a === 'close') closeSheet();
-  else if (a[0] === '+' || a[0] === '-') { const k = a.slice(1), r = assign(k, a[0] === '+' ? 1 : -1); if (!r.ok) toast(r.why || 'Not possible', 'bad'); else if (a[0] === '+') toast(`${UT[k].icon} ${TRAIN[k] ? 'Training a' : 'New'} ${UT[k].name.toLowerCase()}`); renderColony(); tutTick(); hud(); }
+  else if (a === 'lay' || a.startsWith('lay:')) { const r = layEgg(a.slice(4) || null); toast(r.ok ? `🥚 The queen laid an egg (−${EGG_FOOD} 🍯)` : r.why, r.ok ? '' : 'bad'); renderColony(); hud(); }
+  else if (a.startsWith('fix:')) doFix(a.slice(4));
+  else if (a.startsWith('as:')) { S.hatchAs = a.slice(3); toast(`New ants will hatch as ${S.hatchAs}s`); renderColony(); }
+  else if (a[0] === '+' || a[0] === '-') { const k = a.slice(1), r = assign(k, a[0] === '+' ? 1 : -1); if (!r.ok && r.needWorker && a[0] === '+' && k === 'harvester') { const l = layEgg('harvester'); toast(l.ok ? '🥚 No spare worker, so the queen laid a harvester egg' : r.why, l.ok ? '' : 'bad'); } else if (!r.ok) toast(r.why || 'Not possible', 'bad'); else if (a[0] === '+') toast(`${UT[k].icon} ${TRAIN[k] ? 'Training a' : 'New'} ${UT[k].name.toLowerCase()}`); renderColony(); tutTick(); hud(); }
   else if (a.startsWith('remove:')) { const r = roomById(+a.slice(7)); if (r && removeRoom(r)) { toast(`${ROOMS[r.k].name} removed`); closeSheet(); } }
 });
 
@@ -351,4 +360,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (!had || reloading) return; reloading = true; if (UI.running) save(); location.reload(); });
   navigator.serviceWorker.register('sw.js').then(r => { r.update(); document.addEventListener('visibilitychange', () => { if (!document.hidden) r.update(); }); }).catch(() => {});
 }
-window.AH = { get S() { return S; }, set S(v) { S = v; }, step, newState, startGame, restore, serialize, save, loadSaved, clearSave, cam, w2s, s2w, UI, CS, COLS, ROWS, ENT, ENTX, idx, cx, cy, digPlan, commitDig, placeRoom, canRoom, assign, orderSoldiers, units, count, adults, has, roomsOf, foodCap, popCap, eggCap, wl, computeWater, GOALS, TUT, HOLD_MS, setMode, openTab, handleTap, route, ROOMS, VERSION, layReason, netPerMin, fillCell, showTitle, addU, get parts() { return parts; } };
+window.AH = { get S() { return S; }, set S(v) { S = v; }, step, newState, startGame, restore, serialize, save, loadSaved, clearSave, cam, w2s, s2w, UI, CS, COLS, ROWS, ENT, ENTX, idx, cx, cy, digPlan, commitDig, placeRoom, canRoom, assign, orderSoldiers, units, count, adults, has, roomsOf, foodCap, popCap, eggCap, wl, computeWater, GOALS, TUT, HOLD_MS, setMode, openTab, handleTap, route, ROOMS, VERSION, layReason, netPerMin, canLay, layEgg, fillCell, showTitle, addU, get parts() { return parts; } };
