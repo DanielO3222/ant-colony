@@ -1,6 +1,6 @@
 'use strict';
 // ================= Ant Haven — simulation =================
-const VERSION = 'ah-v1.2.0';
+const VERSION = 'ah-v1.2.1';
 const CS = 24, COLS = 64, ROWS = 34, ENT = 32, SURF_H = 300, NC = COLS * ROWS;
 const WW = COLS * CS, WH = ROWS * CS, ENTX = (ENT + .5) * CS, ENTI = ENT;  // entrance cell (ENT,0)
 const SOIL = 0, DUG = 1, PLAN = 2, ROCK = 3;
@@ -278,7 +278,7 @@ function canLay() {   // why the queen can / can't lay right now, plus a one-tap
 }
 function layEgg(as) { const v = canLay(); if (!v.ok) return v; S.res.food -= EGG_FOOD; S.eggs.push({ rid: eggRoomWithSpace().id, t: 0, wet: 0, ox: rnd(), oy: rnd(), as: as || S.hatchAs || 'worker' }); return { ok: true }; }
 function pickConvert(k) {  // choose an ant of role k to convert (prefer idle, not carrying)
-  const c = S.units.filter(u => u.k === k && !u.train && !u.yd); if (!c.length) return null;
+  const c = S.units.filter(u => u.k === k && !(u.train > 0) && !u.yd); if (!c.length) return null;
   c.sort((a, b) => (a.carry ? 1 : 0) - (b.carry ? 1 : 0) || (a.job >= 0 ? 1 : 0) - (b.job >= 0 ? 1 : 0)); return c[0];
 }
 function canTrain(k) {
@@ -396,7 +396,7 @@ function thinkWorker(u, dt) {
 }
 function guardPost(u) { const n = units('soldier').indexOf(u); return { x: ENTX + ((n % 2) ? 1 : -1) * (26 + (n >> 1) % 6 * 12), y: -4 - (n % 3) * 3 }; }
 function thinkSoldier(u, dt) {
-  if (u.train > 0) { u.train -= dt; if (u.path.length) moveAlong(u, dt); if (u.train <= 0) say(`${UT[u.k].icon} A ${UT[u.k].name.toLowerCase()} is trained!`, 'good'); return; }
+  if (u.train > 0) { u.train -= dt; if (u.path.length) moveAlong(u, dt); if (u.train <= 0) { u.train = 0; say(`${UT[u.k].icon} A ${UT[u.k].name.toLowerCase()} is trained!`, 'good'); } return; }
   if (u.mode === 'guard') {
     const e = enemyNear(u, 1e9, e => (isUnder(e.y) || Math.abs(e.x - ENTX) < 260) && e.k !== 'guard'); if (e) { engage(u, e, dt); return; }
     if (hazardOn()) { shelter(u, dt); return; }

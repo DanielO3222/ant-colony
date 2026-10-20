@@ -41,6 +41,9 @@ with sync_playwright() as p:
     # raids don't stack
     new('easy', 8); run(5); ev("() => { AH.startRaid(); AH.S.raid.next = AH.S.t + 1; AH.S.raid.warned = true; }"); run(8)
     check(not ev("() => AH.S.raid.active"), "nest raid waits while a Surface raid is marching")
+    # trained soldiers can leave for the Surface (train timer used to end slightly negative)
+    new('easy', 4); n = ev("() => { const u = AH.addU('soldier', AH.ENTX, 3); u.train = 1; for (let i = 0; i < 60; i++) AH.step(1/30); return [u.train, AH.sendOut('soldier', 9).length]; }")
+    check(n[0] == 0 and n[1] >= 1, f"a freshly trained soldier can be sent to the Surface {n}")
     # save/load mid-game
     new('easy', 9); run(300)
     a = ev("() => ({ n: AH.S.units.length, f: Math.round(AH.S.res.food), t: Math.round(AH.S.t) })")

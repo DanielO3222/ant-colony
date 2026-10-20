@@ -24,7 +24,7 @@ function setView(v, quiet) {
 $('vt-nest').onclick = () => { if (UI.view !== 'nest') setView('nest'); };
 $('vt-yard').onclick = () => { if (UI.view !== 'yard') setView('yard'); };
 function yardHud() {
-  if (!S || !S.yard) return; const nh = S.units.filter(u => u.k === 'harvester' && !u.yd).length, ns = S.units.filter(u => u.k === 'soldier' && !u.yd && !u.train).length, ny = yAnts().length;
+  if (!S || !S.yard) return; const nh = S.units.filter(u => u.k === 'harvester' && !u.yd).length, ns = S.units.filter(u => u.k === 'soldier' && !u.yd && !(u.train > 0)).length, ny = yAnts().length;
   const set = (id, txt, off) => { const b = $(id); const h = b.querySelector('span'); if (h.innerHTML !== txt) h.innerHTML = txt; b.classList.toggle('off', !!off); };
   set('yb-harv', `Send <b>${nh}</b>`, !nh); set('yb-sold', `Send <b>${ns}</b>`, !ns); set('yb-sel', UI.ysel.length ? `Clear <b>${UI.ysel.length}</b>` : `All <b>${ny}</b>`, !ny);
   $('yb-sel').classList.toggle('on', UI.ysel.length > 0); $('yb-rally').classList.toggle('on', UI.ymode === 'rally'); set('yb-home', 'Recall', !ny);

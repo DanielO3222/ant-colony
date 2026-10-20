@@ -98,7 +98,7 @@ function nearestFoe(p, r, filt) { let b = null, bd = r; for (const f of Y().foes
 function nearestMine(p, r) { let b = null, bd = r; for (const u of S.units) { if (!u.yd || u.hid > 0 || u.hp <= 0) continue; const d = yd2(p, u); if (d < bd) { bd = d; b = u; } } return b; }
 // ---------- orders ----------
 function sendOut(k, n) {   // move ants from the nest out onto the Surface map
-  const c = S.units.filter(u => u.k === k && !u.yd && u.tm === 0 && !u.train).sort((a, b) => (a.y < 2 ? 0 : 1) - (b.y < 2 ? 0 : 1)); const got = [];
+  const c = S.units.filter(u => u.k === k && !u.yd && u.tm === 0 && !(u.train > 0)).sort((a, b) => (a.y < 2 ? 0 : 1) - (b.y < 2 ? 0 : 1)); const got = [];
   for (const u of c.slice(0, n)) { u.yd = 1; u.path = []; u.job = -1; u.st = 'idle'; u.x = HOME.x + (rnd() - .5) * 30; u.y = HOME.y + (rnd() - .5) * 30; u.o = null; u.hid = 0; u.fear = 0;
     const r = Y().rally; if (r) u.o = { k: 'move', x: r.x + (rnd() - .5) * 40, y: r.y + (rnd() - .5) * 40 }; got.push(u); }
   if (got.length) S.flags.yard = true; return got;
