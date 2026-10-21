@@ -1,6 +1,7 @@
 // Ant Haven audio: looping background music + tiny sound effects synthesized with Web Audio (no sound files).
 // Nothing plays until the first tap (iOS/Safari autoplay rules). Settings live in localStorage.
-const AUDIO_KEY = 'ah-audio', MUSIC_URL = 'assets/music.mp3';
+const AUDIO_KEY = 'ah-audio', TRACKS = ['assets/music.mp3', 'assets/music2.mp3', 'assets/music3.mp3'];   // playlist, loops through in order
+let trackI = Math.floor(Math.random() * TRACKS.length), trackErr = 0;   // start on a random track each session
 const AU = { music: true, sfx: true, vol: .7 };
 try { Object.assign(AU, JSON.parse(localStorage.getItem(AUDIO_KEY) || '{}')); } catch (e) {}
 let ac = null, master = null, sfxBus = null, musicBus = null, musicEl = null, musicSrc = null, noiseBuf = null, auUnlocked = false, duckT = 0;
@@ -22,7 +23,10 @@ function auInit() {
 }
 function auMusicEl() {
   if (musicEl) return musicEl;
-  musicEl = new Audio(); musicEl.loop = true; musicEl.preload = 'auto'; musicEl.setAttribute('playsinline', ''); musicEl.src = MUSIC_URL;
+  musicEl = new Audio(); musicEl.loop = false; musicEl.preload = 'auto'; musicEl.setAttribute('playsinline', ''); musicEl.src = TRACKS[trackI];
+  musicEl.addEventListener('ended', () => auNext());
+  musicEl.addEventListener('playing', () => { trackErr = 0; });
+  musicEl.addEventListener('error', () => { if (++trackErr < TRACKS.length) auNext(); });   // skip a track that can't load (e.g. offline before it was cached)
   try { musicSrc = ac.createMediaElementSource(musicEl); musicSrc.connect(musicBus); } catch (e) { musicSrc = null; }   // Web Audio gain works on iOS, where element.volume is ignored
   auLevels(); return musicEl;
 }
@@ -31,6 +35,12 @@ function auMusicSync() {
   if (AU.music) { const el = auMusicEl(); if (el.paused) { const p = el.play(); if (p && p.catch) p.catch(() => {}); } }
   else if (musicEl && !musicEl.paused) musicEl.pause();
   auLevels();
+}
+function auNext() {   // move to the next song in the playlist (wraps around)
+  trackI = (trackI + 1) % TRACKS.length; if (!musicEl) return trackI;
+  musicEl.src = TRACKS[trackI]; musicEl.currentTime = 0;
+  if (AU.music && auUnlocked && !document.hidden) { const p = musicEl.play(); if (p && p.catch) p.catch(() => {}); }
+  return trackI;
 }
 function auUnlock() {   // runs on every tap; cheap after the first
   if (!auInit()) return;
@@ -96,4 +106,4 @@ function sfx(k) {
   try { SFX[k](); sfxCount++; } catch (e) {}
 }
 document.addEventListener('pointerdown', e => { if (e.target.closest && e.target.closest('button')) { auUnlock(); sfx('click'); } }, true);
-window.AHAudio = { AU, setAudio, sfx, unlock: auUnlock, get ctx() { return ac; }, get music() { return musicEl; }, get count() { return sfxCount; }, KEY: AUDIO_KEY };
+window.AHAudio = { AU, setAudio, sfx, unlock: auUnlock, next: auNext, TRACKS, get track() { return trackI; }, get ctx() { return ac; }, get music() { return musicEl; }, get count() { return sfxCount; }, KEY: AUDIO_KEY };

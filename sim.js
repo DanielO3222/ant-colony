@@ -1,6 +1,6 @@
 'use strict';
 // ================= Ant Haven — simulation =================
-const VERSION = 'ah-v1.3.0';
+const VERSION = 'ah-v1.3.1';
 const CS = 24, COLS = 64, ROWS = 34, ENT = 32, SURF_H = 300, NC = COLS * ROWS;
 const WW = COLS * CS, WH = ROWS * CS, ENTX = (ENT + .5) * CS, ENTI = ENT;  // entrance cell (ENT,0)
 const SOIL = 0, DUG = 1, PLAN = 2, ROCK = 3;

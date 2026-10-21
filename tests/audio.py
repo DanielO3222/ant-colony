@@ -17,7 +17,22 @@ with sync_playwright() as p:
     check(pg.evaluate("() => AHAudio.ctx === null && AHAudio.music === null"), "no audio context or music before the first tap")
     pg.click("[data-o=new]"); pg.wait_for_timeout(1500)
     check(pg.evaluate("() => !!AHAudio.ctx && !!AHAudio.music"), "first tap creates the audio context and music element")
-    check(pg.evaluate("() => AHAudio.music.loop && AHAudio.music.src.endsWith('assets/music.mp3')"), "music loops from assets/music.mp3")
+    tr = pg.evaluate("() => [AHAudio.TRACKS, AHAudio.track, AHAudio.music.src, AHAudio.music.loop]")
+    check(len(tr[0]) == 3 and tr[2].endswith(tr[0][tr[1]]) and not tr[3], f"playlist of 3 tracks, playing track {tr[1] + 1} ({tr[2].split('/')[-1]}), no single-track loop")
+    # simulate each song ending: should move to the next track and keep playing, wrapping around
+    seen = [tr[1]]
+    for k in range(3):
+        pg.evaluate("() => AHAudio.music.dispatchEvent(new Event('ended'))"); pg.wait_for_timeout(700)
+        st2 = pg.evaluate("() => [AHAudio.track, AHAudio.music.src.split('/').pop(), AHAudio.music.paused, AHAudio.music.currentTime]")
+        check(st2[0] == (seen[-1] + 1) % 3 and st2[1] == tr[0][st2[0]].split('/')[-1] and not st2[2], f"song ended -> next track {st2[0] + 1} ({st2[1]}) plays")
+        seen.append(st2[0])
+    check(seen[-1] == seen[0] and len(set(seen)) == 3, f"playlist wraps around through all 3 tracks {seen}")
+    pg.wait_for_timeout(800)
+    check(pg.evaluate("() => AHAudio.music.currentTime > 0.2 && AHAudio.music.readyState >= 2"), "the new track actually loads and plays")
+    starts = set()
+    for k in range(8):
+        pg2 = ctx.new_page(); pg2.goto(URL); pg2.wait_for_selector("[data-o=new]"); starts.add(pg2.evaluate("() => AHAudio.track")); pg2.close()
+    check(len(starts) >= 2, f"sessions start on a random track {sorted(starts)}")
     check(pg.evaluate("() => !AHAudio.music.paused"), "music is playing after the tap")
     st = pg.evaluate("() => AHAudio.ctx.state"); check(st == "running", f"audio context running ({st})")
     n0 = pg.evaluate("() => AHAudio.count")
@@ -30,6 +45,9 @@ with sync_playwright() as p:
     pg.click("#btn-menu"); pg.wait_for_timeout(200)
     check(pg.is_visible("#snd-music") and pg.is_visible("#snd-sfx") and pg.is_visible("#snd-vol"), "☰ menu shows Music, Sounds and a volume slider")
     check("On" in pg.inner_text("#snd-music") and "On" in pg.inner_text("#snd-sfx"), "both toggles start On")
+    t0 = pg.evaluate("() => AHAudio.track"); pg.click("#snd-next"); pg.wait_for_timeout(600)
+    t1 = pg.evaluate("() => [AHAudio.track, AHAudio.music.paused]")
+    check(t1[0] == (t0 + 1) % 3 and not t1[1] and f"Song {t1[0] + 1} of 3" in pg.inner_text("#snd-next"), f"⏭ Next song skips to track {t1[0] + 1} and shows it")
     pg.click("#snd-music"); pg.wait_for_timeout(200)
     check("Off" in pg.inner_text("#snd-music") and pg.evaluate("() => AHAudio.music.paused"), "Music Off pauses the song")
     pg.click("#snd-sfx"); pg.wait_for_timeout(100)

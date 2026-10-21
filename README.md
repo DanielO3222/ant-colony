@@ -21,6 +21,6 @@ A mobile-first ant-colony game: dig tunnels in a cutaway nest, raise a queen's b
 Biomes: Backyard, Sand Dunes (sandstorms, fast digging, scarce food), Ice World (cold snaps, slow digging). Seven more are coming soon.
 
 ## Tech
-Plain HTML/Canvas 2D, no build step: `sim.js` (simulation), `draw.js` (code-drawn art), `ui.js` (HUD, input, loop), `audio.js` (looping `assets/music.mp3` plus sound effects synthesized in Web Audio, no sound files). PWA with a network-first service worker that reloads itself on update. Saves to localStorage.
+Plain HTML/Canvas 2D, no build step: `sim.js` (simulation), `draw.js` (code-drawn art), `ui.js` (HUD, input, loop), `audio.js` (a 3-song playlist (`assets/music*.mp3`, random start, ⏭ Next song in ☰) plus sound effects synthesized in Web Audio, no sound files). PWA with a network-first service worker that reloads itself on update. Saves to localStorage.
 
 Tests: `python tests/smoke.py http://127.0.0.1:8811/` and `tests/audio.py` (Playwright + headless Chrome at 390×844).

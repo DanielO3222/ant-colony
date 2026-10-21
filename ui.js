@@ -318,10 +318,12 @@ $('overlay').addEventListener('click', e => {
   else if (o === 'title') { if (S && !S.over) save(); else clearSave(); S = null; showTitle(); }
   else if (o === 'hz') { const L = ['off', 'easy', 'hard'], n = L[(L.indexOf(S.yard.hzLevel) + 1) % 3]; setHazLevel(n); showMenu(); toast(`⚙️ Surface hazards: ${HZ_TXT[n]}`); }
   else if (o === 'music' || o === 'sfx') { AHAudio.setAudio(o, !AHAudio.AU[o]); const on = AHAudio.AU[o]; b.classList.toggle('ghost', !on); b.querySelector('b').textContent = on ? 'On' : 'Off'; }
+  else if (o === 'nextsong') { const i = AHAudio.next(); $('snd-track').textContent = `Song ${i + 1} of ${AHAudio.TRACKS.length}`; if (!AHAudio.AU.music) toast('🎵 Music is off — turn it on to hear the next song'); }
   else if (o === 'goalsclose') { closeOverlay(); UI.paused = false; }
 });
 function audioRows() { const A = AHAudio.AU;
   return `<div class="snd"><button class="big ${A.music ? '' : 'ghost'}" data-o="music" id="snd-music">🎵 Music: <b>${A.music ? 'On' : 'Off'}</b></button><button class="big ${A.sfx ? '' : 'ghost'}" data-o="sfx" id="snd-sfx">🔊 Sounds: <b>${A.sfx ? 'On' : 'Off'}</b></button></div>
+  <button class="big ghost" data-o="nextsong" id="snd-next">⏭ Next song <small id="snd-track">Song ${AHAudio.track + 1} of ${AHAudio.TRACKS.length}</small></button>
   <label class="vol">🔈<input type="range" id="snd-vol" min="0" max="100" step="5" value="${Math.round(A.vol * 100)}" aria-label="Volume">🔊</label>`; }
 $('overlay').addEventListener('input', e => { if (e.target.id === 'snd-vol') AHAudio.setAudio('vol', +e.target.value / 100); });
 $('overlay').addEventListener('change', e => { if (e.target.id === 'snd-vol') AHAudio.sfx('click'); });
