@@ -16,9 +16,11 @@ A mobile-first ant-colony game: dig tunnels in a cutaway nest, raise a queen's b
 - ⚠️ Surface dangers, all telegraphed: a growing foot shadow (then STOMP), a magnifying-glass light that chases clusters (hide under leaves or in a hill), and big bugs (spider, beetle, centipede, ladybug) that drop lots of food. Set Off / Easy / Hard in ☰.
 - Hold, then drag a box to select soldiers; tap to move, tap the enemy hill to attack. Destroy it to win, then keep going in endless mode.
 
+🎵 Music and sound effects start after your first tap. Turn Music or Sounds on/off and set the volume in ☰.
+
 Biomes: Backyard, Sand Dunes (sandstorms, fast digging, scarce food), Ice World (cold snaps, slow digging). Seven more are coming soon.
 
 ## Tech
-Plain HTML/Canvas 2D, no build step: `sim.js` (simulation), `draw.js` (code-drawn art), `ui.js` (HUD, input, loop). PWA with a network-first service worker that reloads itself on update. Saves to localStorage.
+Plain HTML/Canvas 2D, no build step: `sim.js` (simulation), `draw.js` (code-drawn art), `ui.js` (HUD, input, loop), `audio.js` (looping `assets/music.mp3` plus sound effects synthesized in Web Audio, no sound files). PWA with a network-first service worker that reloads itself on update. Saves to localStorage.
 
-Tests: `python tests/smoke.py http://127.0.0.1:8811/` (Playwright + headless Chrome at 390×844).
+Tests: `python tests/smoke.py http://127.0.0.1:8811/` and `tests/audio.py` (Playwright + headless Chrome at 390×844).

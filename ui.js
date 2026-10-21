@@ -317,9 +317,15 @@ $('overlay').addEventListener('click', e => {
   else if (o === 'endless') { S.endless = true; S.raid.next = S.t + 120; closeOverlay(); UI.paused = false; toast('♾️ Endless mode — raids keep coming!', 'goal'); }
   else if (o === 'title') { if (S && !S.over) save(); else clearSave(); S = null; showTitle(); }
   else if (o === 'hz') { const L = ['off', 'easy', 'hard'], n = L[(L.indexOf(S.yard.hzLevel) + 1) % 3]; setHazLevel(n); showMenu(); toast(`⚙️ Surface hazards: ${HZ_TXT[n]}`); }
+  else if (o === 'music' || o === 'sfx') { AHAudio.setAudio(o, !AHAudio.AU[o]); const on = AHAudio.AU[o]; b.classList.toggle('ghost', !on); b.querySelector('b').textContent = on ? 'On' : 'Off'; }
   else if (o === 'goalsclose') { closeOverlay(); UI.paused = false; }
 });
-function showMenu() { UI.paused = true; overlay(`<h2>⏸ Paused</h2><button class="big green" data-o="resume">▶ Resume</button><button class="big" data-o="hz">⚙️ Surface hazards: <b>${HZ_TXT[S.yard.hzLevel]}</b></button><button class="big" data-o="help">❓ How to play</button><button class="big" data-o="restart">↺ Restart</button><button class="big ghost" data-o="quit">💾 Save & quit to title</button>`); }
+function audioRows() { const A = AHAudio.AU;
+  return `<div class="snd"><button class="big ${A.music ? '' : 'ghost'}" data-o="music" id="snd-music">🎵 Music: <b>${A.music ? 'On' : 'Off'}</b></button><button class="big ${A.sfx ? '' : 'ghost'}" data-o="sfx" id="snd-sfx">🔊 Sounds: <b>${A.sfx ? 'On' : 'Off'}</b></button></div>
+  <label class="vol">🔈<input type="range" id="snd-vol" min="0" max="100" step="5" value="${Math.round(A.vol * 100)}" aria-label="Volume">🔊</label>`; }
+$('overlay').addEventListener('input', e => { if (e.target.id === 'snd-vol') AHAudio.setAudio('vol', +e.target.value / 100); });
+$('overlay').addEventListener('change', e => { if (e.target.id === 'snd-vol') AHAudio.sfx('click'); });
+function showMenu() { UI.paused = true; overlay(`<h2>⏸ Paused</h2><button class="big green" data-o="resume">▶ Resume</button><button class="big" data-o="hz">⚙️ Surface hazards: <b>${HZ_TXT[S.yard.hzLevel]}</b></button>${audioRows()}<button class="big" data-o="help">❓ How to play</button><button class="big" data-o="restart">↺ Restart</button><button class="big ghost" data-o="quit">💾 Save & quit to title</button>`); }
 $('btn-menu').onclick = showMenu;
 $('btn-pause').onclick = () => { UI.paused = !UI.paused; $('btn-pause').textContent = UI.paused ? '▶' : '⏸'; toast(UI.paused ? '⏸ Paused' : '▶ Resumed'); };
 $('btn-speed').onclick = () => { UI.speed = UI.speed === 1 ? 2 : UI.speed === 2 ? 3 : 1; $('btn-speed').textContent = UI.speed + '×'; $('btn-speed').classList.toggle('on', UI.speed > 1); };
@@ -333,11 +339,11 @@ function startGame(s, cont) {
   $('coach-t').dataset.k = ''; setView('nest', true); hud(); tutTick(); if (!cont) save();
 }
 function gameOver() {
-  UI.paused = true; clearSave();
+  UI.paused = true; clearSave(); sfx('lose');
   overlay(`<h2 class="sad">💀 The colony has fallen</h2><p class="bdesc">${S.why}</p>${showStats()}<button class="big green" data-o="dorestart">↺ Try again</button><button class="big ghost" data-o="title">🏠 Title</button>`);
 }
 function victory() {
-  UI.paused = true; save();
+  UI.paused = true; save(); sfx('win');
   overlay(`<h2 class="win">🏆 Victory!</h2><p class="bdesc">${S.hill.dead ? 'The enemy hill has fallen.' : 'Every rival colony is now your outpost.'} The yard is yours!</p>${showStats(true)}<button class="big green" data-o="endless">♾️ Keep playing (endless)</button><button class="big ghost" data-o="title">🏠 Title</button>`);
 }
 

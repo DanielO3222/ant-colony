@@ -92,7 +92,7 @@ function yMove(u, tx, ty, dt, mul) {  // straight-line steering with obstacle sl
   for (const o of yObstacles()) { const ox = u.x - o.x, oy = u.y - o.y, od = Math.hypot(ox, oy); if (od < o.r && od > .01) { u.x = o.x + ox / od * o.r; u.y = o.y + oy / od * o.r; } }
   u.ang = Math.atan2(vy, vx); u.mv = 1; u.ph += dt * 14; return false;
 }
-function yHit(a, b, dt) { b.hp -= (a.yd ? UT[a.k].dps : a.dps) * dt; a.atk = .25; a.ang = Math.atan2(b.y - a.y, b.x - a.x); b.lastHit = a.yd ? 'me' : a.id;
+function yHit(a, b, dt) { b.hp -= (a.yd ? UT[a.k].dps : a.dps) * dt; a.atk = .25; a.ang = Math.atan2(b.y - a.y, b.x - a.x); b.lastHit = a.yd ? 'me' : a.id; if ((a.yd || b.yd) && Math.random() < dt * 3) sfx('bite');
   if (rnd() < dt * 4) yparts.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, vx: (rnd() - .5) * 40, vy: (rnd() - .5) * 40, t: .4, c: '#fff6c8', r: 2 }); }
 function nearestFoe(p, r, filt) { let b = null, bd = r; for (const f of Y().foes) { if (f.hp <= 0 || (filt && !filt(f))) continue; const d = yd2(p, f); if (d < bd) { bd = d; b = f; } } return b; }
 function nearestMine(p, r) { let b = null, bd = r; for (const u of S.units) { if (!u.yd || u.hid > 0 || u.hp <= 0) continue; const d = yd2(p, u); if (d < bd) { bd = d; b = u; } } return b; }
@@ -145,14 +145,14 @@ function yardAnt(u, dt) {
       let bd = o && o.k === 'move' ? 0 : 520; const from = o && o.k === 'gather' ? o : u;
       for (const f of Y().food) { if (!yExplored(f.x, f.y) || Y().cols.some(c => c.own === 'rival' && yd2(c, f) < 230)) continue; const d = yd2(from, f); if (d < bd) { bd = d; fd = f; } }
       if (fd) u.o = { k: 'gather', id: fd.id, x: fd.x, y: fd.y }; }
-    if (fd) { if (yMove(u, fd.x, fd.y, dt) || yd2(u, fd) < 8) { u.wait -= dt; if (u.wait <= 0) { u.wait = .6; const a = Math.min(3, fd.amt); fd.amt -= a; u.carry = a; if (fd.amt <= .01) Y().food.splice(Y().food.indexOf(fd), 1); } } return; }
+    if (fd) { if (yMove(u, fd.x, fd.y, dt) || yd2(u, fd) < 8) { u.wait -= dt; if (u.wait <= 0) { u.wait = .6; const a = Math.min(3, fd.amt); fd.amt -= a; u.carry = a; sfx('pop'); if (fd.amt <= .01) Y().food.splice(Y().food.indexOf(fd), 1); } } return; }
   }
   if (u.k === 'soldier') {
     if (o && o.k === 'attack') { const f = Y().foes.find(f => f.id === o.id && f.hp > 0); if (f) { if (yd2(u, f) < 14 + f.r * .6) yHit(u, f, dt); else yMove(u, f.x, f.y, dt); return; } u.o = { k: 'move', x: u.x, y: u.y }; }
     if (o && o.k === 'hill') { const c = Y().cols[o.id]; if (c && c.own === 'rival') {
         const def = nearestFoe(c, 110, f => f.c === c.i) || nearestFoe(u, 70);
         if (def) { if (yd2(u, def) < 14 + def.r * .6) yHit(u, def, dt); else yMove(u, def.x, def.y, dt); return; }
-        if (yd2(u, c) < 30) { c.hp -= UT.soldier.dps * .6 * dt; u.atk = .25; u.ang = Math.atan2(c.y - u.y, c.x - u.x); c.lastHit = S.t; if (rnd() < dt * 3) yparts.push({ x: c.x + (rnd() - .5) * 30, y: c.y + (rnd() - .5) * 20, vx: (rnd() - .5) * 30, vy: -20, t: .6, c: '#a8794a', r: 2.5 }); if (c.hp <= 0) captureHill(c); }
+        if (yd2(u, c) < 30) { c.hp -= UT.soldier.dps * .6 * dt; u.atk = .25; u.ang = Math.atan2(c.y - u.y, c.x - u.x); c.lastHit = S.t; if (Math.random() < dt * 3) sfx('bite'); if (rnd() < dt * 3) yparts.push({ x: c.x + (rnd() - .5) * 30, y: c.y + (rnd() - .5) * 20, vx: (rnd() - .5) * 30, vy: -20, t: .6, c: '#a8794a', r: 2.5 }); if (c.hp <= 0) captureHill(c); }
         else yMove(u, c.x + Math.cos(u.id) * 18, c.y + Math.sin(u.id) * 14, dt); return; }
       u.o = null; }
     const gp = o && o.k === 'move' ? o : (u.gp || (u.gp = { x: u.x, y: u.y }));
@@ -167,7 +167,7 @@ function yardAnt(u, dt) {
 function captureHill(c) {
   c.own = 'me'; c.hp = c.max; Y().out++; const r = RIVALS[c.i];
   for (const f of Y().foes) if (f.c === c.i) f.hp = 0;
-  yReveal(Y(), c.x, c.y, 260); S.st.captured = (S.st.captured || 0) + 1;
+  sfx('fanfare'); yReveal(Y(), c.x, c.y, 260); S.st.captured = (S.st.captured || 0) + 1;
   say(`🏴 You captured the ${r.name} hill! New outpost: +${OUT_POP} ant space, +food`, 'good'); events.push({ shake: .4 });
   if (Y().cols.every(k => k.own === 'me') && !S.won) { S.won = true; events.push({ victory: 1 }); }
 }
@@ -212,7 +212,7 @@ function startRaid() {
   const y = Y(), d = YDIF[S.diff] || YDIF.easy, alive = y.cols.filter(c => c.own === 'rival'); if (!alive.length) return null;
   const c = alive[Math.floor(rnd() * alive.length)], n = Math.round(d.raidN[0] + rnd() * (d.raidN[1] - d.raidN[0]) + (y.raids || 0) * .5);
   for (let i = 0; i < n; i++) { const f = addFoe('rsol', c.x + (rnd() - .5) * 40, c.y + (rnd() - .5) * 40, c.i); f.raid = 1; f.wait = i * .3; }
-  y.raids = (y.raids || 0) + 1; y.raidCol = c.i; y.raidT = S.t;
+  y.raids = (y.raids || 0) + 1; y.raidCol = c.i; sfx('alarm'); y.raidT = S.t;
   say(`⚔️ ${RIVALS[c.i].name} are marching ${n} soldiers to your hill! Intercept them on the 🗺️ Surface`, 'bad'); return c;
 }
 // ---------- hazards ----------
@@ -220,14 +220,14 @@ function antClusters(from) { const a = yAnts().filter(u => !(u.hid > 0) && !inSh
   let best = null, bn = -1e9; for (const u of a) { let n = 0; for (const v of a) if (yd2(u, v) < 70) n++; const sc = n - (from ? yd2(u, from) / 120 : 0); if (sc > bn) { bn = sc; best = u; } } return best; }
 function spawnHazard(k, x, y) {
   const yh = Y(), h = YHAZ[yh.hzLevel] || YHAZ.easy;
-  if (k === 'foot') { const z = { k, x, y, r: h.footR, t: 0, grow: h.footGrow, react: h.react, notice: h.notice, a: rnd() * 7, id: yh.nid++ }; yh.hz.push(z); say('👟 A giant foot is coming down! Get out of the shadow!', 'warn'); return z; }
-  if (k === 'glass') { const z = { k, x, y, r: h.glassR, t: -2.5, life: h.glassLife, spd: h.glassSpd, dps: h.glassDps, react: h.react, tx: x, ty: y, rt: 0, id: yh.nid++ }; yh.hz.push(z); say('🔍 A kid with a magnifying glass! Ants run for leaf shade or a hill', 'warn'); return z; }
-  if (BUGS[k]) { const f = addFoe(k, x, y, -1); say(`${BUGS[k].icon} A ${BUGS[k].name.toLowerCase()} is prowling the Surface! Send soldiers in a group`, 'warn'); return f; }
+  if (k === 'foot') { const z = { k, x, y, r: h.footR, t: 0, grow: h.footGrow, react: h.react, notice: h.notice, a: rnd() * 7, id: yh.nid++ }; yh.hz.push(z); sfx('warn'); say('👟 A giant foot is coming down! Get out of the shadow!', 'warn'); return z; }
+  if (k === 'glass') { const z = { k, x, y, r: h.glassR, t: -2.5, life: h.glassLife, spd: h.glassSpd, dps: h.glassDps, react: h.react, tx: x, ty: y, rt: 0, id: yh.nid++ }; yh.hz.push(z); sfx('glass'); say('🔍 A kid with a magnifying glass! Ants run for leaf shade or a hill', 'warn'); return z; }
+  if (BUGS[k]) { const f = addFoe(k, x, y, -1); sfx('bug'); say(`${BUGS[k].icon} A ${BUGS[k].name.toLowerCase()} is prowling the Surface! Send soldiers in a group`, 'warn'); return f; }
 }
 function hazardTick(dt) {
   const yh = Y();
   for (let i = yh.hz.length - 1; i >= 0; i--) { const z = yh.hz[i]; z.t += dt;
-    if (z.k === 'foot') { if (!z.done && z.t >= z.grow) { z.done = 1; events.push({ shake: .5, stomp: 1 }); let n = 0;
+    if (z.k === 'foot') { if (!z.done && z.t >= z.grow) { z.done = 1; sfx('stomp'); events.push({ shake: .5, stomp: 1 }); let n = 0;
         for (const u of S.units) if (u.yd && !(u.hid > 0) && yd2(u, z) < z.r) { u.hp = 0; n++; }
         for (const f of yh.foes) if (yd2(f, z) < z.r + f.r * .5) f.hp -= f.c >= 0 ? 999 : 70;
         for (let j = 0; j < 26; j++) { const a = rnd() * 7; yparts.push({ x: z.x + Math.cos(a) * z.r, y: z.y + Math.sin(a) * z.r * .8, vx: Math.cos(a) * 60, vy: Math.sin(a) * 60, t: .7, c: '#c8b08a', r: 3 }); }
@@ -237,7 +237,7 @@ function hazardTick(dt) {
       if (z.t > z.life + 1) { yh.hz.splice(i, 1); continue; }
       z.rt -= dt; if (z.rt <= 0) { z.rt = 1.2; const t = antClusters(z); if (t && yd2(t, z) < 600) { z.tx = t.x; z.ty = t.y; } else { z.tx = z.x + (rnd() - .5) * 200; z.ty = z.y + (rnd() - .5) * 200; } }
       if (z.t > 0 && z.t < z.life) { const dx = z.tx - z.x, dy = z.ty - z.y, d = Math.hypot(dx, dy); if (d > 1) { const s = Math.min(d, z.spd * dt); z.x += dx / d * s; z.y += dy / d * s; }
-        for (const u of S.units) if (u.yd && !(u.hid > 0) && yd2(u, z) < z.r && !inShade(u)) { u.hp -= z.dps * dt; if (rnd() < dt * 6) yparts.push({ x: u.x, y: u.y, vx: (rnd() - .5) * 10, vy: -25, t: .9, c: '#9a9a9a', r: 3, smoke: 1 }); }
+        for (const u of S.units) if (u.yd && !(u.hid > 0) && yd2(u, z) < z.r && !inShade(u)) { u.hp -= z.dps * dt; sfx('sizzle'); if (rnd() < dt * 6) yparts.push({ x: u.x, y: u.y, vx: (rnd() - .5) * 10, vy: -25, t: .9, c: '#9a9a9a', r: 3, smoke: 1 }); }
         for (const f of yh.foes) if (yd2(f, z) < z.r && !inShade(f)) f.hp -= z.dps * dt * (f.c >= 0 ? 1 : .5);
       } else if (z.t <= 0) { const t = antClusters(z); if (t) { const dx = t.x - z.x, dy = t.y - z.y, d = Math.hypot(dx, dy); if (d > 1) { z.x += dx / d * Math.min(d, 18 * dt); z.y += dy / d * Math.min(d, 18 * dt); } } }
     }
@@ -274,7 +274,7 @@ function yardTick(dt) {
   // deaths of foes
   for (let i = yh.foes.length - 1; i >= 0; i--) { const f = yh.foes[i]; if (f.hp > 0 && !f.gone) continue; yh.foes.splice(i, 1); if (f.gone) continue;
     for (let j = 0; j < 8; j++) yparts.push({ x: f.x, y: f.y, vx: (rnd() - .5) * 70, vy: (rnd() - .5) * 70, t: .7, c: f.c >= 0 ? RIVALS[f.c].dark : '#3a2a20', r: 2.5 });
-    if (f.c < 0) { const b = BUGS[f.k], fd = yardAddFood(yh, null, f.x, f.y, b.drop, 'meat'); fd.bug = f.k; S.st.kills++; S.st.bugs = (S.st.bugs || 0) + 1; if (f.lastHit === 'me') say(`🍖 ${b.name} defeated! It dropped ${b.drop} food — send harvesters`, 'good'); }
+    if (f.c < 0) { const b = BUGS[f.k], fd = yardAddFood(yh, null, f.x, f.y, b.drop, 'meat'); fd.bug = f.k; S.st.kills++; S.st.bugs = (S.st.bugs || 0) + 1; if (f.lastHit === 'me') sfx('bigwin'); if (f.lastHit === 'me') say(`🍖 ${b.name} defeated! It dropped ${b.drop} food — send harvesters`, 'good'); }
     else if (f.lastHit === 'me') S.st.kills++; }
   // vision
   yvisT -= dt; if (yvisT <= 0) { yvisT = .4; yvis.fill(0); yReveal(yh, HOME.x, HOME.y, 300); for (const c of yh.cols) if (c.own === 'me') yReveal(yh, c.x, c.y, 240); for (const u of mine) yReveal(yh, u.x, u.y, 150); }

@@ -144,3 +144,7 @@ html.tablet .logo span{font-size:46px}html.tablet .logo h1{font-size:62px}html.t
 html.tablet .bio{height:84px;font-size:15px}html.tablet .bio i{font-size:28px}html.tablet .bdesc{font-size:16px}
 html.tablet .diff button{height:56px;font-size:19px}html.tablet .big{height:64px;font-size:21px;border-radius:16px;margin-top:10px}html.tablet .big small{font-size:13px}html.tablet .ver{font-size:12px}
 html.tablet .help li{font-size:17px}html.tablet .goals li{font-size:17px;padding:8px 4px}html.tablet .stats div{padding:8px}
+.snd{display:flex;gap:6px}.snd .big{flex:1;font-size:15px}
+.vol{display:flex;align-items:center;gap:8px;margin-top:9px;padding:6px 12px;border-radius:14px;background:#e8d3a8;border:2px solid #c9a36e;font-size:18px}
+.vol input{flex:1;height:30px;accent-color:#a5743f;touch-action:none}
+html.tablet .snd .big{font-size:19px}html.tablet .vol{font-size:22px;padding:8px 14px}html.tablet .vol input{height:40px}

@@ -1,6 +1,6 @@
 'use strict';
 // ================= Ant Haven — simulation =================
-const VERSION = 'ah-v1.2.1';
+const VERSION = 'ah-v1.3.0';
 const CS = 24, COLS = 64, ROWS = 34, ENT = 32, SURF_H = 300, NC = COLS * ROWS;
 const WW = COLS * CS, WH = ROWS * CS, ENTX = (ENT + .5) * CS, ENTI = ENT;  // entrance cell (ENT,0)
 const SOIL = 0, DUG = 1, PLAN = 2, ROCK = 3;
@@ -207,12 +207,12 @@ function commitDig(path) {
   S.res.food -= p.cost; for (const i of p.cells) { S.grid[i] = PLAN; S.digp[i] = 0; } S.st.planned += p.cells.length; nestDirty = true; return p;
 }
 function completeDig(i) {
-  S.grid[i] = DUG; S.digp[i] = 0; nestDirty = true; const rid = S.room[i];
+  S.grid[i] = DUG; S.digp[i] = 0; nestDirty = true; const rid = S.room[i]; sfx('dig');
   if (!rid) S.st.dug++;
   for (let k = 0; k < 7; k++) parts.push({ x: (cx(i) + .5) * CS, y: (cy(i) + .5) * CS, vx: (rnd() - .5) * 60, vy: -rnd() * 50, t: .7, c: B().soil[layer(cy(i))], r: 1.5 + rnd() * 1.5 });
   if (rid) { const r = roomById(rid); if (r && !r.done && roomCells(r).every(c => S.grid[c] === DUG)) finishRoom(r); }
 }
-function finishRoom(r) { r.done = true; S.st.rooms++; nestDirty = true; say(`${ROOMS[r.k].icon} ${ROOMS[r.k].name} is ready!`, 'good');
+function finishRoom(r) { r.done = true; S.st.rooms++; nestDirty = true; sfx('build'); say(`${ROOMS[r.k].icon} ${ROOMS[r.k].name} is ready!`, 'good');
   if (r.k === 'lookout') for (let x = ENT - 13; x <= ENT + 13; x++) S.fog[clamp(x, 0, COLS - 1)] = 1;
   if (r.k === 'queen') { const q = queen(); if (q) { q.st = 'move'; route(q, ...Object.values(rndRoomPt(r))); } } }
 // erase / fill one cell. returns string result or null
@@ -276,7 +276,7 @@ function canLay() {   // why the queen can / can't lay right now, plus a one-tap
   if (S.res.food < EGG_FOOD) return { ok: false, poor: true, why: `Need ${EGG_FOOD} food for an egg`, fix: 'harvester' };
   return { ok: true };
 }
-function layEgg(as) { const v = canLay(); if (!v.ok) return v; S.res.food -= EGG_FOOD; S.eggs.push({ rid: eggRoomWithSpace().id, t: 0, wet: 0, ox: rnd(), oy: rnd(), as: as || S.hatchAs || 'worker' }); return { ok: true }; }
+function layEgg(as) { const v = canLay(); if (!v.ok) return v; sfx('egg'); S.res.food -= EGG_FOOD; S.eggs.push({ rid: eggRoomWithSpace().id, t: 0, wet: 0, ox: rnd(), oy: rnd(), as: as || S.hatchAs || 'worker' }); return { ok: true }; }
 function pickConvert(k) {  // choose an ant of role k to convert (prefer idle, not carrying)
   const c = S.units.filter(u => u.k === k && !(u.train > 0) && !u.yd); if (!c.length) return null;
   c.sort((a, b) => (a.carry ? 1 : 0) - (b.carry ? 1 : 0) || (a.job >= 0 ? 1 : 0) - (b.job >= 0 ? 1 : 0)); return c[0];
@@ -308,7 +308,7 @@ function guardSoldiers(ids) { for (const id of ids) { const u = uById(id); if (u
 
 // ---------------- AI ----------------
 function enemyNear(u, r, filter) { let best = null, bd = r; for (const e of S.units) { if (e.tm === u.tm || e.hp <= 0 || !e.yd !== !u.yd) continue; if (filter && !filter(e)) continue; const d = dist(u, e); if (d < bd) { bd = d; best = e; } } return best; }
-function hit(u, e, dt) { if (e.k === 'raider') e.lastBy = u.id; e.hp -= UT[u.k].dps * (u.k === 'raider' && e.k !== 'soldier' && D().qSafe ? .4 : 1) * dt; u.atk = .25; u.ang = Math.atan2(e.y - u.y, e.x - u.x); e.lastHit = u.id;
+function hit(u, e, dt) { if (e.k === 'raider') e.lastBy = u.id; e.hp -= UT[u.k].dps * (u.k === 'raider' && e.k !== 'soldier' && D().qSafe ? .4 : 1) * dt; u.atk = .25; u.ang = Math.atan2(e.y - u.y, e.x - u.x); e.lastHit = u.id; if (Math.random() < dt * 3) sfx('bite');
   if (rnd() < dt * 4) parts.push({ x: (u.x + e.x) / 2, y: (u.y + e.y) / 2 - 3, vx: (rnd() - .5) * 40, vy: -20 - rnd() * 30, t: .4, c: '#fff6c8', r: 1.2 }); }
 function engage(u, e, dt) {
   if (dist(u, e) < 15) { hit(u, e, dt); return; }
@@ -348,7 +348,7 @@ function thinkForager(u, dt, leaf) {
   if (u.st === 'shelter') u.st = 'idle';
   if (u.st === 'go') { const it = S.items.find(i => i.id === u.tgt); if (!it || it.amt < 1) { u.st = 'idle'; return; } if (moveAlong(u, dt)) { u.st = 'take'; u.wait = leaf ? 1.6 : 1; } return; }
   if (u.st === 'take') { const it = S.items.find(i => i.id === u.tgt); u.st = 'idle';
-    if (it && it.amt >= 1) { const a = Math.min(leaf ? 1 : 3, Math.floor(it.amt)); it.amt -= a; u.carry = a; u.cs = it.sub; if (!leaf && it.amt < 1) { S.items.splice(S.items.indexOf(it), 1); if (S.forage === it.id) S.forage = null; } } return; }
+    if (it && it.amt >= 1) { const a = Math.min(leaf ? 1 : 3, Math.floor(it.amt)); it.amt -= a; u.carry = a; u.cs = it.sub; sfx('pop'); if (!leaf && it.amt < 1) { S.items.splice(S.items.indexOf(it), 1); if (S.forage === it.id) S.forage = null; } } return; }
   if (u.st === 'explore' || u.st === 'wander') { if (moveAlong(u, dt)) { u.st = 'idle'; u.wait = .5 + rnd(); } return; }
   const it = pickItem(leaf);
   if (it) { u.tgt = it.id; u.st = 'go'; if (!route(u, it.x + (rnd() - .5) * 14, u.lane)) u.st = 'idle'; return; }
@@ -380,7 +380,7 @@ function thinkWorker(u, dt) {
     if (u.st === 'walk') { if (moveAlong(u, dt)) u.st = 'dig'; return; }
     if (wl[u.job] > .5) { u.job = -1; u.st = 'idle'; u.wait = 1; return; }
     const tx = (cx(u.job) + .5) * CS, ty = (cy(u.job) + .5) * CS; u.ang = Math.atan2(ty - u.y, tx - u.x); u.ph += dt * 7; u.dig = 1;
-    S.digp[u.job] += dt / digTime(u.job);
+    S.digp[u.job] += dt / digTime(u.job); if (Math.random() < dt * 2) sfx('scrape');
     if (rnd() < dt * 5) parts.push({ x: (u.x + tx) / 2, y: (u.y + ty) / 2, vx: (rnd() - .5) * 50, vy: -rnd() * 40, t: .5, c: B().soil[layer(cy(u.job))], r: 1 + rnd() });
     if (S.digp[u.job] >= 1) { claimSet.delete(u.job); completeDig(u.job); u.job = -1; u.st = 'idle'; }
     return;
@@ -449,28 +449,28 @@ function eventsTick(dt) {
   const bio = B(), dif = D(), R = S.rain, H = S.haz, W = S.raid;
   // rain / flood
   if (!R.on && !R.warned && S.t > R.next - 15) { R.warned = true; say(`${bio.rain.icon} ${bio.rain.name} is coming! Deep tunnels will flood.`, 'warn'); }
-  if (!R.on && S.t >= R.next) { R.on = true; R.t = bio.rain.dur; R.n++; R.rate = bio.rain.vol * dif.rainMul * (1 + Math.min(1, R.n * .08)) / bio.rain.dur; S.st.floods++; }
+  if (!R.on && S.t >= R.next) { R.on = true; sfx('rain'); R.t = bio.rain.dur; R.n++; R.rate = bio.rain.vol * dif.rainMul * (1 + Math.min(1, R.n * .08)) / bio.rain.dur; S.st.floods++; }
   if (R.on) { S.water += R.rate * dt; R.t -= dt; if (R.t <= 0) { R.on = false; R.warned = false; R.next = S.t + bio.rain.every * (.8 + rnd() * .4); } }
   // hazard
   if (bio.hazard) {
     if (!H.on && !H.warned && S.t > H.next - 14) { H.warned = true; say(`${bio.hazard.icon} ${bio.hazard.name} in 14s! Ants will hide underground.`, 'warn'); }
-    if (!H.on && S.t >= H.next) { H.on = true; H.t = bio.hazard.dur; H.n++; }
+    if (!H.on && S.t >= H.next) { H.on = true; sfx('wind'); H.t = bio.hazard.dur; H.n++; }
     if (H.on) { H.t -= dt; for (const u of S.units) if (!u.yd && !isUnder(u.y) && u.k !== 'guard') u.hp -= (bio.hazard.kind === 'cold' ? .45 : .6) * dt;
       if (H.t <= 0) { H.on = false; H.warned = false; H.next = S.t + bio.hazard.every * (.8 + rnd() * .4); if (W.next - S.t < 25) W.next = S.t + 25; } }
   }
   // raids
   const lead = has('lookout') ? 45 : 12;
-  if (!W.active && !W.warned && S.t > W.next - lead) { W.warned = true; say(has('lookout') ? '🔭 Lookout: enemy raid in 45s!' : '⚔️ You hear marching… a raid is coming!', 'warn'); }
+  if (!W.active && !W.warned && S.t > W.next - lead) { W.warned = true; sfx('alarm'); say(has('lookout') ? '🔭 Lookout: enemy raid in 45s!' : '⚔️ You hear marching… a raid is coming!', 'warn'); }
   if (!W.active && S.t >= W.next && !H.on && S.yard && S.yard.foes.some(f => f.raid)) W.next = S.t + 45;   // don't stack with a Surface raid
   if (!W.active && S.t >= W.next && !H.on) {
     W.active = true; W.lost = 0; W.kills = 0; const n = dif.raidBase + Math.floor(W.n * dif.raidGrow) + (S.endless ? 2 : 0);
     const hx = !S.hill.dead ? S.hill.x : (W.n % 2 ? CS * 1.5 : WW - CS * 1.5);
     for (let i = 0; i < n; i++) { const u = addU('raider', hx + (i - n / 2) * 10, -4 - rnd() * 8); u.st = 'in'; u.home = hx; u.wait = i * .4; u.rt = i * .35; }
-    W.n++; say(`⚔️ Raid! ${n} enemy ants attack!`, 'bad');
+    W.n++; sfx('alarm'); say(`⚔️ Raid! ${n} enemy ants attack!`, 'bad');
   }
   if (W.active && !S.units.some(u => u.k === 'raider')) {
     W.active = false; W.warned = false; S.st.raids++; W.next = S.t + (S.endless ? 150 : dif.raidEvery) * (.9 + rnd() * .2);
-    say(`🎉 Raid repelled! ${W.kills} raiders defeated${W.lost ? `, ${W.lost} food stolen` : ''}.`, 'good');
+    sfx('bigwin'); say(`🎉 Raid repelled! ${W.kills} raiders defeated${W.lost ? `, ${W.lost} food stolen` : ''}.`, 'good');
   }
 }
 function itemsTick(dt) {
@@ -497,7 +497,7 @@ function colonyTick(dt) {
   for (let k = S.eggs.length - 1; k >= 0; k--) { const g = S.eggs[k], r = roomById(g.rid) || homeRoom();
     if (r.fl) { g.wet += dt; if (g.wet > 6) { S.eggs.splice(k, 1); say('🥚 Eggs drowned in a flooded room!', 'bad'); continue; } } else g.wet = Math.max(0, g.wet - dt);
     g.t += dt * (cold && !nurse ? .5 : 1);
-    if (g.t >= need) { S.eggs.splice(k, 1); const p = rndRoomPt(r); const u = addU(g.as === 'harvester' ? 'harvester' : 'worker', p.x, p.y); u.wait = 1; S.st.hatched++; events.push({ hatch: u.id }); } }
+    if (g.t >= need) { S.eggs.splice(k, 1); const p = rndRoomPt(r); const u = addU(g.as === 'harvester' ? 'harvester' : 'worker', p.x, p.y); u.wait = 1; S.st.hatched++; events.push({ hatch: u.id }); sfx('hatch'); } }
   // gardens: leaves -> food
   for (const r of S.rooms) if (r.k === 'garden' && r.done && !r.fl) { r.gt = (r.gt || 0) + dt; if (r.gt >= 5) { r.gt = 0; if (S.res.leaves >= 1 && S.res.food < foodCap()) { S.res.leaves -= 1; const before = S.res.food; S.res.food = Math.min(foodCap(), S.res.food + 3); S.st.gathered += S.res.food - before; incomeAdd(S.res.food - before); r.grow = Math.min(1, (r.grow || 0) + .08); } } }
   // flooded storage spoils food
@@ -505,7 +505,7 @@ function colonyTick(dt) {
   S.res.food = Math.min(S.res.food, foodCap());
   // enemy hill guards
   const h = S.hill; if (!h.dead) { h.spawnT += dt; if (h.spawnT > 25) { h.spawnT = 0; if (count('guard') < dif.guards + 1) addU('guard', h.x, -6); }
-    if (h.hp <= 0) { h.dead = true; h.hp = 0; for (const u of units('guard')) u.hp = 0; S.won = true; events.push({ victory: 1 }); } }
+    if (h.hp <= 0) { h.dead = true; h.hp = 0; for (const u of units('guard')) u.hp = 0; S.won = true; sfx('fanfare'); events.push({ victory: 1 }); } }
 }
 let goalT = 0;
 const GOALS = [
@@ -528,7 +528,7 @@ const GOALS = [
   ['outpost', 'Capture a rival ant hill', () => (S.st.captured || 0) >= 1],
   ['hill', 'Destroy the enemy ant hill', () => S.hill.dead],
 ];
-function goalsTick() { for (const [id, name, f] of GOALS) if (!S.goals[id] && f()) { S.goals[id] = S.t; if (id !== 'hill') S.res.food = Math.min(foodCap(), S.res.food + GOAL_REWARD); say(`🎯 Goal done: ${name}${id !== 'hill' ? ` (+${GOAL_REWARD} 🍯)` : ''}`, 'goal'); } }
+function goalsTick() { for (const [id, name, f] of GOALS) if (!S.goals[id] && f()) { S.goals[id] = S.t; sfx('goal'); if (id !== 'hill') S.res.food = Math.min(foodCap(), S.res.food + GOAL_REWARD); say(`🎯 Goal done: ${name}${id !== 'hill' ? ` (+${GOAL_REWARD} 🍯)` : ''}`, 'goal'); } }
 
 function step(dt) {
   if (!S || S.over) return;
