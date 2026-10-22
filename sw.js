@@ -1,4 +1,4 @@
-const VERSION = 'ah-v1.3.1';
+const VERSION = 'ah-v1.4.0';
 const MUSIC_CACHE = 'ah-music-1';   // kept across versions so the song isn't re-downloaded on every update
 const FILES = ['./', 'index.html', 'style.css', 'audio.js', 'sim.js', 'yard.js', 'yardui.js', 'draw.js', 'ui.js', 'manifest.webmanifest', 'icons/icon-152.png', 'icons/icon-167.png', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });

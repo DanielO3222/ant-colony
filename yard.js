@@ -61,7 +61,7 @@ function setHazLevel(l) { const y = Y(); y.hzLevel = l; if (l === 'off') { y.hz.
 function yardAddFood(y, R, x, yy, amt, k) {
   R = R || rnd; if (x == null) { for (let t = 0; t < 30; t++) { x = 60 + R() * (YW - 120); yy = 60 + R() * (YH - 120);
       if (yd2({ x, y: yy }, HOME) > 90 && y.cols.every(c => yd2({ x, y: yy }, c) > 80) && !y.deco.pud.some(p => yd2(p, { x, y: yy }) < p.r + 20) && !y.food.some(f => yd2(f, { x, y: yy }) < 60)) break; } }
-  k = k || YFOODS[Math.floor(R() * YFOODS.length)]; amt = amt || Math.round(25 + R() * 55 + (k === 'cookie' || k === 'apple' ? 40 : 0));
+  const FL = (S && BIOMES[S.biome] && BIOMES[S.biome].yfoods) || YFOODS; k = k || FL[Math.floor(R() * FL.length)]; amt = amt || Math.round(25 + R() * 55 + (k === 'cookie' || k === 'apple' ? 40 : 0));
   const f = { id: y.nid++, k, x, y: yy, amt, max: amt, a: R() * 7 }; y.food.push(f); return f;
 }
 function addFoe(k, x, y, c) { const Yd = Y(), d = YDIF[S.diff] || YDIF.easy, hz = YHAZ[Yd.hzLevel] || YHAZ.easy; let hp, dps, spd, r;
@@ -83,7 +83,7 @@ function nearestHill(p) { let b = HOME, bd = 1e9; for (const h of myHills()) { c
 function inShade(p) { for (const l of Y().deco.leaf) if (yd2(p, l) < l.r * .85) return true; return false; }
 function yObstacles() { const D = Y().deco; return Y()._obs || (Y()._obs = [...D.peb.filter(p => p.r >= 11).map(p => ({ x: p.x, y: p.y, r: p.r + 2 })), ...D.pud.map(p => ({ x: p.x, y: p.y, r: p.r * .9 }))]); }
 function yMove(u, tx, ty, dt, mul) {  // straight-line steering with obstacle sliding; returns true on arrival
-  const dx = tx - u.x, dy = ty - u.y, d = Math.hypot(dx, dy), sp = (u.yd ? UT[u.k].spd * YSPD : u.spd * 1.2) * (mul || 1) * (u.carry ? .88 : 1) * dt;
+  const dx = tx - u.x, dy = ty - u.y, d = Math.hypot(dx, dy), sp = (u.yd ? UT[u.k].spd * YSPD * ((S && BIOMES[S.biome].spd) || 1) : u.spd * 1.2) * (mul || 1) * (u.carry ? .88 : 1) * dt;
   if (d <= sp || d < 1) { u.x = tx; u.y = ty; return true; }
   let vx = dx / d, vy = dy / d;
   for (const o of yObstacles()) { const ox = u.x - o.x, oy = u.y - o.y, od = Math.hypot(ox, oy); if (od < o.r + 14 && od > 0.01) { const nx = ox / od, ny = oy / od, dot = vx * nx + vy * ny;

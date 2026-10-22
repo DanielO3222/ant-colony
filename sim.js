@@ -1,6 +1,6 @@
 'use strict';
 // ================= Ant Haven — simulation =================
-const VERSION = 'ah-v1.3.1';
+const VERSION = 'ah-v1.4.0';
 const CS = 24, COLS = 64, ROWS = 34, ENT = 32, SURF_H = 300, NC = COLS * ROWS;
 const WW = COLS * CS, WH = ROWS * CS, ENTX = (ENT + .5) * CS, ENTI = ENT;  // entrance cell (ENT,0)
 const SOIL = 0, DUG = 1, PLAN = 2, ROCK = 3;
@@ -15,28 +15,72 @@ const BIOMES = {
   backyard: { name: 'Backyard', emoji: '🌻', desc: 'Soft lawn soil and spring rain. The best place to start.',
     sky: ['#79c3ee', '#d2efff'], hills: ['#a6d47c', '#86bd5f'], grass: '#5aa73b', grassD: '#3c8829', ground: '#6a9a3a',
     soil: ['#a06d40', '#865633', '#6c4124', '#523019'], rim: '#3b2112', tun: ['#36200f', '#21120a'], rock: ['#a69c90', '#756c62'],
-    glow: '#ffcf73', water: '74,163,223', digMul: 1, rocks: 34,
+    glow: '#ffcf73', water: '74,163,223', digMul: 1, rocks: 34, scen: 'backyard', root: '#c9a36e', trink: ['cap', 'shell', 'marble'],
     rain: { name: 'Rain', icon: '🌧', every: 190, dur: 22, vol: 7 }, hazard: null,
-    foodEvery: 34, foods: ['crumb', 'berry', 'crumb', 'seed'], plant: 'clover', plants: [-10, 9, 18, -20, 24, -27] },
+    foodEvery: 34, foods: ['crumb', 'berry', 'crumb', 'seed'], plant: 'clover', plants: [-10, 9, 18, -20, 24, -27], twist: 'Gentle start · spring rain' },
   dunes: { name: 'Sand Dunes', emoji: '🏜️', desc: 'Sand digs fast, but food is scarce. Sandstorms and flash floods.',
     sky: ['#f3b96c', '#ffe8c2'], hills: ['#efc785', '#dcae62'], grass: '#e2bd78', grassD: '#c99a52', ground: '#d8ae66',
     soil: ['#e6bd7a', '#d4a564', '#bc884d', '#99683a'], rim: '#6e4721', tun: ['#4d3016', '#33200d'], rock: ['#cfa97f', '#9c7853'],
-    glow: '#ffd98a', water: '88,180,216', digMul: .62, rocks: 24,
-    rain: { name: 'Flash flood', icon: '🌊', every: 300, dur: 12, vol: 10 }, hazard: { kind: 'sandstorm', name: 'Sandstorm', icon: '🌪', every: 210, dur: 18 },
-    foodEvery: 48, foods: ['seed', 'seed', 'date', 'crumb'], plant: 'succulent', plants: [-12, 11, 22, -24] },
+    glow: '#ffd98a', water: '88,180,216', digMul: .62, rocks: 24, scen: 'dunes', root: '#8a6136', trink: ['shell', 'bone', 'shell'],
+    rain: { name: 'Flash flood', icon: '🌊', every: 300, dur: 12, vol: 10 }, hazard: { kind: 'sandstorm', name: 'Sandstorm', icon: '🌪', every: 210, dur: 18, dmg: .6, slow: .6, fx: 'streak', col: '230,190,120' },
+    foodEvery: 48, foods: ['seed', 'seed', 'date', 'crumb'], plant: 'succulent', plants: [-12, 11, 22, -24],
+    yfoods: ['seed', 'crumb', 'cookie', 'apple', 'seed', 'candy'], twist: 'Fast sandy digging · scarce food · sandstorms' },
   ice: { name: 'Ice World', emoji: '❄️', desc: 'Frozen ground digs slowly. Cold snaps hurt ants outside.',
-    sky: ['#9fc2e6', '#eef6ff'], hills: ['#f4f9ff', '#d6e7f6'], grass: '#eef6fc', grassD: '#c9dcec', ground: '#dfeaf4',
-    soil: ['#bccbd9', '#93a9bf', '#7289a3', '#566a83'], rim: '#2d3b4f', tun: ['#212d3d', '#151d29'], rock: ['#e6f0f8', '#a9bdd0'],
-    glow: '#bfe6ff', water: '126,206,255', digMul: 1.55, rocks: 40,
-    rain: { name: 'Meltwater', icon: '💧', every: 230, dur: 20, vol: 6 }, hazard: { kind: 'cold', name: 'Cold snap', icon: '🥶', every: 200, dur: 26 },
-    foodEvery: 40, foods: ['berry', 'seed', 'crumb'], plant: 'moss', plants: [-11, 10, 20, -22, 28] },
-  palm: { name: 'Palm Isle', emoji: '🌴', soon: true, card: ['#4fd1c5', '#f6e7b0'] },
-  peak: { name: 'High Peak', emoji: '🏔️', soon: true, card: ['#7d8ca3', '#e6ecf3'] },
-  mars: { name: 'Red Planet', emoji: '🪐', soon: true, card: ['#c2512f', '#f4a261'] },
-  woods: { name: 'Deep Woods', emoji: '🌲', soon: true, card: ['#2f5d3a', '#8fbf6a'] },
-  fen: { name: 'Fog Fen', emoji: '🌫️', soon: true, card: ['#6b7f78', '#c9d6cf'] },
-  ember: { name: 'Ember Ridge', emoji: '🌋', soon: true, card: ['#5a1f1a', '#f08a3c'] },
-  bloom: { name: 'Wild Bloom', emoji: '🌸', soon: true, card: ['#d96ba8', '#ffd6ea'] },
+    sky: ['#8fb4dc', '#eef6ff'], hills: ['#f4f9ff', '#d6e7f6'], grass: '#f4f9ff', grassD: '#c9dcec', ground: '#e6f0f8',
+    soil: ['#d6e4f1', '#adc4dc', '#86a3c2', '#647f9f'], rim: '#b8d6ee', tun: ['#22324a', '#151f30'], rock: ['#f0f7fc', '#a9c3da'],
+    glow: '#bfe6ff', water: '126,206,255', digMul: 1.55, rocks: 40, scen: 'ice', root: '#e8f2fb', trink: ['crystal', 'bubble', 'crystal'], frost: 1,
+    rain: { name: 'Meltwater', icon: '💧', every: 230, dur: 20, vol: 6 }, hazard: { kind: 'cold', name: 'Cold snap', icon: '🥶', every: 200, dur: 26, dmg: .45, fx: 'flake', col: '255,255,255' },
+    foodEvery: 40, foods: ['frostberry', 'berry', 'seed', 'crumb'], plant: 'moss', plants: [-11, 10, 20, -22, 28],
+    yfoods: ['frostberry', 'crumb', 'cookie', 'berry', 'seed', 'apple'], twist: 'Frozen ground digs slowly · cold snaps' },
+  palm: { name: 'Palm Isle', emoji: '🌴', desc: 'A sunny beach island full of tropical fruit. Small tides wash in often.',
+    sky: ['#4fc3e8', '#d8f6ff'], hills: ['#3fc1c9', '#7fdcd6'], grass: '#f3dfa2', grassD: '#d9bf7a', ground: '#ecd69a',
+    soil: ['#efd79a', '#d9b877', '#b48f5a', '#86643d'], rim: '#6b4a24', tun: ['#4a3218', '#2e1e0d'], rock: ['#f2e6cf', '#c4a985'],
+    glow: '#ffe08a', water: '64,200,210', digMul: .8, rocks: 22, scen: 'palm', root: '#a88452', trink: ['shell', 'shell', 'star'],
+    rain: { name: 'High tide', icon: '🌊', every: 170, dur: 12, vol: 5 }, hazard: null,
+    foodEvery: 28, foods: ['mango', 'berry', 'mango', 'seed'], plant: 'reed', plants: [-10, 9, 18, -20, 24],
+    yfoods: ['mango', 'starfruit', 'crumb', 'candy', 'mango', 'seed'], twist: 'Lots of tropical fruit · quick little tides' },
+  peak: { name: 'High Peak', emoji: '🏔️', desc: 'Rocky mountain ground with big boulders. Windy gusts blow ants around outside.',
+    sky: ['#6fa3d8', '#dfeefb'], hills: ['#8ea0b4', '#b7c5d3'], grass: '#8fb072', grassD: '#6d8f55', ground: '#93a07c',
+    soil: ['#a3a08f', '#878272', '#6c675a', '#514c43'], rim: '#2f2c27', tun: ['#2a2723', '#191714'], rock: ['#c9c6bd', '#8d897f'],
+    glow: '#ffd98a', water: '96,160,220', digMul: 1.2, rocks: 62, scen: 'peak', root: '#8a7a5a', trink: ['crystal', 'bone', 'crystal'],
+    rain: { name: 'Mountain rain', icon: '🌧', every: 220, dur: 16, vol: 6 }, hazard: { kind: 'gust', name: 'Mountain wind', icon: '💨', every: 220, dur: 14, dmg: .3, slow: .55, fx: 'streak', col: '220,230,240' },
+    foodEvery: 38, foods: ['seed', 'berry', 'crumb'], plant: 'fern', plants: [-11, 10, 20, -22],
+    yfoods: ['seed', 'berry', 'crumb', 'cookie', 'apple', 'seed'], twist: 'Big boulders + slower digging · wind gusts' },
+  mars: { name: 'Red Planet', emoji: '🪐', desc: 'Space ants! Low gravity makes ants zoom 20% faster, but red dust storms roll in.',
+    sky: ['#2a1d4a', '#e88a5a'], hills: ['#b9532e', '#d9774a'], grass: '#d0683c', grassD: '#a8482a', ground: '#c45c34',
+    soil: ['#c8643a', '#a64a2a', '#83361f', '#5e2616'], rim: '#3a140a', tun: ['#2e1410', '#1a0a08'], rock: ['#d98a64', '#8a3d22'],
+    glow: '#ffb37a', water: '170,220,255', digMul: 1, rocks: 30, scen: 'mars', root: '#e0a080', trink: ['gear', 'crystal', 'gear'], spd: 1.2,
+    rain: { name: 'Ice melt', icon: '💧', every: 380, dur: 12, vol: 4 }, hazard: { kind: 'dust', name: 'Dust storm', icon: '🌪', every: 230, dur: 16, dmg: .35, slow: .6, fx: 'streak', col: '230,130,90' },
+    foodEvery: 38, foods: ['starfruit', 'crumb', 'seed'], plant: 'crystal', plants: [-12, 11, 22, -24],
+    yfoods: ['starfruit', 'crumb', 'candy', 'cookie', 'seed'], twist: 'Low gravity: ants 20% faster · dust storms' },
+  woods: { name: 'Deep Woods', emoji: '🌲', desc: 'A shady forest full of leafy plants. Leaf-cutters carry double leaves here.',
+    sky: ['#86b8a0', '#e2f2df'], hills: ['#2f5d3a', '#3f7548'], grass: '#3f7a35', grassD: '#2d5c26', ground: '#4b6b2e',
+    soil: ['#6a4a2c', '#553a22', '#432c19', '#311f11'], rim: '#1f130a', tun: ['#24170c', '#150d06'], rock: ['#8f9a80', '#5e6852'],
+    glow: '#ffd27a', water: '70,140,190', digMul: 1, rocks: 30, scen: 'woods', root: '#9a7a50', trink: ['acorn', 'cap', 'acorn'], leaf: 2,
+    rain: { name: 'Forest rain', icon: '🌧', every: 210, dur: 18, vol: 6 }, hazard: null,
+    foodEvery: 36, foods: ['acorn', 'berry', 'acorn', 'seed'], plant: 'fern', plants: [-10, 9, 15, -16, 22, -24, 28, -29],
+    yfoods: ['acorn', 'mushroom', 'berry', 'acorn', 'apple', 'seed'], twist: 'Leaf-cutters carry 2× leaves · extra leafy plants' },
+  fen: { name: 'Fog Fen', emoji: '🌫️', desc: 'A misty swamp. Squishy mud digs fast, but bog rain floods often. Build a Sump!',
+    sky: ['#9fb0a8', '#e2e9e4'], hills: ['#6f8a76', '#88a08c'], grass: '#6f8f4a', grassD: '#4f6f34', ground: '#5d6f45',
+    soil: ['#7b7458', '#625c45', '#4c4735', '#383426'], rim: '#1f1d14', tun: ['#25231a', '#16140e'], rock: ['#a2a690', '#6b6f5c'],
+    glow: '#e8f0a0', water: '96,150,120', digMul: .75, rocks: 24, scen: 'fen', root: '#8a8a60', trink: ['bubble', 'shell', 'bubble'], see: 3,
+    rain: { name: 'Bog rain', icon: '🌧', every: 170, dur: 16, vol: 5.5 }, hazard: null,
+    foodEvery: 34, foods: ['berry', 'seed', 'crumb'], plant: 'reed', plants: [-11, 10, 19, -20, 26],
+    yfoods: ['berry', 'seed', 'crumb', 'mushroom', 'cookie'], twist: 'Fast squishy digging · frequent floods · misty view' },
+  ember: { name: 'Ember Ridge', emoji: '🌋', desc: 'Warm volcano ground hatches eggs faster. Ash falls send ants inside.',
+    sky: ['#5a2a3a', '#f0a060'], hills: ['#3a2a2a', '#55393a'], grass: '#5a4a3a', grassD: '#3a2e24', ground: '#4a3a30',
+    soil: ['#5a4640', '#463631', '#352825', '#241a18'], rim: '#120a08', tun: ['#2a1410', '#170a08'], rock: ['#6a5a58', '#3a302e'],
+    glow: '#ff9a4a', water: '120,180,220', digMul: 1.1, rocks: 36, scen: 'ember', root: '#7a5a4a', trink: ['crystal', 'ember', 'crystal'], hatch: 1.25, veins: '#ff7a2a',
+    rain: { name: 'Warm rain', icon: '🌦', every: 300, dur: 12, vol: 5 }, hazard: { kind: 'ash', name: 'Ash fall', icon: '🌋', every: 230, dur: 16, dmg: .3, slow: .7, fx: 'flake', col: '120,110,110' },
+    foodEvery: 38, foods: ['chili', 'seed', 'crumb'], plant: 'crystal', plants: [-12, 11, 21, -23],
+    yfoods: ['chili', 'seed', 'crumb', 'cookie', 'chili'], twist: 'Warm ground: eggs hatch 25% faster · ash falls' },
+  bloom: { name: 'Wild Bloom', emoji: '🌸', desc: 'A flower meadow dripping with nectar. Food is everywhere and plants regrow fast.',
+    sky: ['#8fd0f5', '#fff0f8'], hills: ['#9ad67a', '#b8e68f'], grass: '#7cc95a', grassD: '#5aa73b', ground: '#79b84a',
+    soil: ['#a8744a', '#8e5d38', '#734828', '#57351c'], rim: '#3b2112', tun: ['#36200f', '#21120a'], rock: ['#d8c2d8', '#a08aa8'],
+    glow: '#ffd0ea', water: '90,170,230', digMul: 1, rocks: 28, scen: 'bloom', root: '#c9a36e', trink: ['marble', 'cap', 'marble'], regen: 2,
+    rain: { name: 'Spring shower', icon: '🌦', every: 220, dur: 16, vol: 5 }, hazard: null,
+    foodEvery: 24, foods: ['nectar', 'berry', 'nectar', 'seed'], plant: 'flower', plants: [-10, 9, 18, -20, 24, -27],
+    yfoods: ['nectar', 'berry', 'candy', 'apple', 'nectar', 'cookie'], twist: 'Easiest: extra food + plants regrow 2× faster' },
 };
 const DIFF = {
   easy: { name: 'Easy', food: 50, eat: 1 / 85, raidFirst: 420, raidEvery: 240, raidBase: 3, raidGrow: 1, hp: 1, hillHp: 320, guards: 3, starve: .07, rainMul: 1, qRegen: .3, qSafe: true },
@@ -168,7 +212,7 @@ function route(u, gx, gy) {
 function moveAlong(u, dt) {
   if (!u.path.length) return true;
   const c = isUnder(u.y) ? cellOf(u.x, u.y) : -1;
-  let sp = UT[u.k].spd * (c >= 0 && wl[c] > .5 ? .35 : 1) * (!isUnder(u.y) && S.rain.on ? .85 : 1) * (u.tm === 0 && S.haz.on && B().hazard.kind === 'sandstorm' && !isUnder(u.y) ? .6 : 1);
+  let sp = UT[u.k].spd * (c >= 0 && wl[c] > .5 ? .35 : 1) * (!isUnder(u.y) && S.rain.on ? .85 : 1) * (u.tm === 0 && S.haz.on && B().hazard && B().hazard.slow && !isUnder(u.y) ? B().hazard.slow : 1) * (u.tm === 0 ? B().spd || 1 : 1);
   let d = sp * dt;
   while (d > 0 && u.path.length) { const p = u.path[0], dx = p.x - u.x, dy = p.y - u.y, L = Math.hypot(dx, dy);
     if (L > .01) u.ang = Math.atan2(dy, dx);
@@ -332,7 +376,7 @@ function depot(leaf) {
 }
 let fullWarnT = 0;
 function deliver(u, leaf) {
-  if (leaf) { S.res.leaves += u.carry; S.st.leaves += u.carry; }
+  if (leaf) { const n = u.carry * (B().leaf || 1); S.res.leaves += n; S.st.leaves += n; }
   else { const cap = foodCap(), before = S.res.food; S.res.food = Math.min(cap, S.res.food + u.carry); const got = S.res.food - before; S.st.gathered += got; incomeAdd(got);
     if (got < u.carry && S.t - fullWarnT > 25) { fullWarnT = S.t; say('Food storage is full! Build a Food Storage or Pantry.', 'bad'); } }
   u.carry = 0;
@@ -455,7 +499,7 @@ function eventsTick(dt) {
   if (bio.hazard) {
     if (!H.on && !H.warned && S.t > H.next - 14) { H.warned = true; say(`${bio.hazard.icon} ${bio.hazard.name} in 14s! Ants will hide underground.`, 'warn'); }
     if (!H.on && S.t >= H.next) { H.on = true; sfx('wind'); H.t = bio.hazard.dur; H.n++; }
-    if (H.on) { H.t -= dt; for (const u of S.units) if (!u.yd && !isUnder(u.y) && u.k !== 'guard') u.hp -= (bio.hazard.kind === 'cold' ? .45 : .6) * dt;
+    if (H.on) { H.t -= dt; for (const u of S.units) if (!u.yd && !isUnder(u.y) && u.k !== 'guard') u.hp -= (bio.hazard.dmg != null ? bio.hazard.dmg : .6) * dt;
       if (H.t <= 0) { H.on = false; H.warned = false; H.next = S.t + bio.hazard.every * (.8 + rnd() * .4); if (W.next - S.t < 25) W.next = S.t + 25; } }
   }
   // raids
@@ -478,7 +522,7 @@ function itemsTick(dt) {
   if (S.itT > bio.foodEvery) { S.itT = 0; const nf = S.items.filter(i => i.k === 'food').length;
     if (nf < 9) { let c = 0; for (let k = 0; k < 20; k++) { c = 2 + Math.floor(rnd() * (COLS - 4)); if (Math.abs(c - ENT) > 3 && Math.abs(c * CS - S.hill.x) > 70 && !S.items.some(i => Math.abs(i.x - (c + .5) * CS) < 30)) break; }
       const a = 18 + Math.floor(rnd() * 28); S.items.push({ id: S.nid++, k: 'food', sub: bio.foods[Math.floor(rnd() * bio.foods.length)], x: (c + .5) * CS, amt: a, max: a, rg: 0 }); } }
-  for (const it of S.items) if (it.k === 'plant' && it.amt < it.max) { it.rg += dt; if (it.rg > 10) { it.rg = 0; it.amt++; } }
+  for (const it of S.items) if (it.k === 'plant' && it.amt < it.max) { it.rg += dt * (bio.regen || 1); if (it.rg > 10) { it.rg = 0; it.amt++; } }
 }
 function colonyTick(dt) {
   const dif = D(); const q = queen();
@@ -496,7 +540,7 @@ function colonyTick(dt) {
   const need = nurse ? 24 : 40;
   for (let k = S.eggs.length - 1; k >= 0; k--) { const g = S.eggs[k], r = roomById(g.rid) || homeRoom();
     if (r.fl) { g.wet += dt; if (g.wet > 6) { S.eggs.splice(k, 1); say('🥚 Eggs drowned in a flooded room!', 'bad'); continue; } } else g.wet = Math.max(0, g.wet - dt);
-    g.t += dt * (cold && !nurse ? .5 : 1);
+    g.t += dt * (cold && !nurse ? .5 : 1) * (B().hatch || 1);
     if (g.t >= need) { S.eggs.splice(k, 1); const p = rndRoomPt(r); const u = addU(g.as === 'harvester' ? 'harvester' : 'worker', p.x, p.y); u.wait = 1; S.st.hatched++; events.push({ hatch: u.id }); sfx('hatch'); } }
   // gardens: leaves -> food
   for (const r of S.rooms) if (r.k === 'garden' && r.done && !r.fl) { r.gt = (r.gt || 0) + dt; if (r.gt >= 5) { r.gt = 0; if (S.res.leaves >= 1 && S.res.food < foodCap()) { S.res.leaves -= 1; const before = S.res.food; S.res.food = Math.min(foodCap(), S.res.food + 3); S.st.gathered += S.res.food - before; incomeAdd(S.res.food - before); r.grow = Math.min(1, (r.grow || 0) + .08); } } }
@@ -546,7 +590,7 @@ function step(dt) {
     switch (u.k) { case 'worker': thinkWorker(u, dt); break; case 'harvester': thinkForager(u, dt, false); break; case 'cutter': u.train > 0 ? thinkSoldier(u, dt) : thinkForager(u, dt, true); break;
       case 'soldier': thinkSoldier(u, dt); break; case 'queen': thinkQueen(u, dt); break; case 'raider': thinkRaider(u, dt); break; case 'guard': thinkGuard(u, dt); break; }
     if (isUnder(u.y)) { const c = cellOf(u.x, u.y); if (wl[c] > .6) u.hp -= .35 * dt; }
-    if (u.tm === 0 && !isUnder(u.y)) { const c = Math.floor(u.x / CS); for (let x = c - 4; x <= c + 4; x++) if (x >= 0 && x < COLS) S.fog[x] = 1; }
+    if (u.tm === 0 && !isUnder(u.y)) { const c = Math.floor(u.x / CS); const sr = B().see || 4; for (let x = c - sr; x <= c + sr; x++) if (x >= 0 && x < COLS) S.fog[x] = 1; }
   }
   if (S.yard) yardTick(dt);
   for (let k = S.units.length - 1; k >= 0; k--) { const u = S.units[k];

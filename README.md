@@ -18,9 +18,20 @@ A mobile-first ant-colony game: dig tunnels in a cutaway nest, raise a queen's b
 
 🎵 Music and sound effects start after your first tap. Turn Music or Sounds on/off and set the volume in ☰.
 
-Biomes: Backyard, Sand Dunes (sandstorms, fast digging, scarce food), Ice World (cold snaps, slow digging). Seven more are coming soon.
+## Biomes (all 10 playable)
+Each biome has its own look in both the Nest and the Surface map, plus a gentle twist:
+- 🌻 **Backyard**: soft lawn and spring rain. The best place to start.
+- 🏜️ **Sand Dunes**: sand digs fast, food is scarce, sandstorms and flash floods.
+- ❄️ **Ice World**: snowy surface with falling snow, a snowman, frozen ponds, frosty icicle tunnels. Frozen ground digs slowly; cold snaps frost the screen and send ants inside.
+- 🌴 **Palm Isle**: beach, ocean and palm trees. Lots of tropical fruit, quick little high tides.
+- 🏔️ **High Peak**: snowy mountains, alpine meadow, extra boulders and slower digging. Mountain wind gusts slow ants outside.
+- 🪐 **Red Planet**: stars, moons and rockets. Low gravity makes ants 20% faster; red dust storms roll in.
+- 🌲 **Deep Woods**: tall trees, ferns, mushrooms and fireflies. Leaf-cutters carry double leaves.
+- 🌫️ **Fog Fen**: misty swamp with reeds and lily pads. Squishy mud digs fast, bog rain floods more often, and the view is mistier.
+- 🌋 **Ember Ridge**: volcanoes and glowing lava rock. Warm ground hatches eggs 25% faster; ash falls send ants inside.
+- 🌸 **Wild Bloom**: a flower meadow with a rainbow and drifting petals. The easiest biome: extra nectar food and plants regrow twice as fast.
 
 ## Tech
 Plain HTML/Canvas 2D, no build step: `sim.js` (simulation), `draw.js` (code-drawn art), `ui.js` (HUD, input, loop), `audio.js` (a 3-song playlist (`assets/music*.mp3`, random start, ⏭ Next song in ☰) plus sound effects synthesized in Web Audio, no sound files). PWA with a network-first service worker that reloads itself on update. Saves to localStorage.
 
-Tests: `python tests/smoke.py http://127.0.0.1:8811/` and `tests/audio.py` (Playwright + headless Chrome at 390×844).
+Tests: `python tests/smoke.py http://127.0.0.1:8811/`, `tests/biomes.py` (every biome plays a minute, saves round-trip, old saves load), `tests/biomeshots.py` and `tests/audio.py` (Playwright + headless Chrome at 390×844).

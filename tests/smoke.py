@@ -50,8 +50,8 @@ with sync_playwright() as p:
 
     pg.goto(URL); pg.wait_for_selector("[data-o=new]"); pg.wait_for_timeout(1200)
     pg.screenshot(path=SS + "01-title.png")
-    check(pg.locator(".bio").count() == 10 and pg.locator(".bio.soon").count() == 7, "title shows 10 biomes, 7 marked coming soon")
-    pg.click("[data-bio=mars]"); pg.wait_for_timeout(100); check("coming soon" in pg.inner_text("#toasts"), "coming-soon biome explains itself")
+    check(pg.locator(".bio").count() == 10 and pg.locator(".bio.soon").count() == 0, "title shows 10 playable biomes, none coming soon")
+    pg.click("[data-bio=mars]"); pg.wait_for_timeout(100); check("Red Planet" in pg.inner_text(".bdesc") or "gravity" in pg.inner_text(".bdesc"), "Red Planet can be picked and shows its description")
     pg.click("[data-bio=dunes]"); pg.wait_for_timeout(700); pg.screenshot(path=SS + "01b-title-dunes.png")
     pg.click("[data-bio=backyard]"); pg.wait_for_timeout(300)
     pg.evaluate("() => localStorage.clear()")
